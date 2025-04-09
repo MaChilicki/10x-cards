@@ -1,0 +1,231 @@
+{
+  "main": {
+    "id": "8c2f8804a337bae1",
+    "type": "split",
+    "children": [
+      {
+        "id": "f9700feee858a7bb",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "6bd651622b723a7a",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "1. Koncepcja MVP.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "1. Koncepcja MVP"
+            }
+          },
+          {
+            "id": "29e99ad72f02ba58",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "1. Koncepcja MVP.md",
+                "mode": "source",
+                "source": true
+              },
+              "icon": "lucide-file",
+              "title": "1. Koncepcja MVP"
+            }
+          },
+          {
+            "id": "ff03b272539912bd",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "3. Podsumowanie sesji planistycznej PRD.md",
+                "mode": "source",
+                "source": true
+              },
+              "icon": "lucide-file",
+              "title": "3. Podsumowanie sesji planistycznej PRD"
+            }
+          },
+          {
+            "id": "65eccadd6ba1b547",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "4. Prompt do tworzenia PRD.md",
+                "mode": "source",
+                "source": true
+              },
+              "icon": "lucide-file",
+              "title": "4. Prompt do tworzenia PRD"
+            }
+          },
+          {
+            "id": "0b530f8f76ba09f8",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "5. Tech stack.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "5. Tech stack"
+            }
+          }
+        ],
+        "currentTab": 4
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "702f6eb52e136128",
+    "type": "split",
+    "children": [
+      {
+        "id": "536d5fa9bc5d1844",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "834730b73df23b2a",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Przeglądarka plików"
+            }
+          },
+          {
+            "id": "d9e1f29d71f86acd",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Szukaj"
+            }
+          },
+          {
+            "id": "5abffc6f6f6b772f",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Zakładki"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "135342b9ebd33b90",
+    "type": "split",
+    "children": [
+      {
+        "id": "849838173fc19b71",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "ae63105557c0fc41",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "5. Tech stack.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Łącza zwrotne do 5. Tech stack"
+            }
+          },
+          {
+            "id": "9262d3d24e406a24",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "5. Tech stack.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Linki wychodzące z 5. Tech stack"
+            }
+          },
+          {
+            "id": "58c2f4c95308c7c8",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true
+              },
+              "icon": "lucide-tags",
+              "title": "Tagi"
+            }
+          },
+          {
+            "id": "024b59a9f1cee523",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "5. Tech stack.md"
+              },
+              "icon": "lucide-list",
+              "title": "Zarys 5. Tech stack"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Otwórz okno szybkiej zmiany pliku": false,
+      "graph:Otwórz graf": false,
+      "canvas:Stwórz nowe płótno": false,
+      "daily-notes:Otwórz dzisiejszą notatkę": false,
+      "templates:Wstaw szablon": false,
+      "command-palette:Otwórz paletę poleceń": false
+    }
+  },
+  "active": "0b530f8f76ba09f8",
+  "lastOpenFiles": [
+    "4. Prompt do tworzenia PRD.md",
+    "5. Tech stack.md",
+    "3. Podsumowanie sesji planistycznej PRD.md",
+    "1. Koncepcja MVP.md",
+    "2. Sesja planistyczna PRD.md",
+    "Bez nazwy"
+  ]
+}
