@@ -2,6 +2,9 @@ import type { APIRoute } from "astro";
 import { documentCreateSchema } from "../../../lib/schemas/document.schema";
 import { DocumentsService } from "../../../lib/services/documents.service";
 import { logger } from "../../../lib/services/logger.service";
+import { AiGenerateService } from "../../../lib/services/ai-generate.service";
+import { flashcardAiGenerateSchema } from "../../../lib/schemas/ai-generate.schema";
+import { ZodError } from "zod";
 
 export const prerender = false;
 
@@ -51,23 +54,46 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const documentsService = new DocumentsService(locals.supabase);
-    const document = await documentsService.createDocument(validationResult.data);
+    
+    try {
+      const document = await documentsService.createDocument(validationResult.data);
+      return new Response(JSON.stringify(document), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        logger.error("Błąd walidacji przy generowaniu fiszek:", error.errors);
+        return new Response(
+          JSON.stringify({
+            error: "Błąd walidacji przy generowaniu fiszek",
+            details: error.errors,
+          }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
 
-    logger.info(`Utworzono nowy dokument o ID: ${document.id}`);
-
-    return new Response(JSON.stringify(document), {
-      status: 201,
-      headers: { "Content-Type": "application/json" },
-    });
+      logger.error("Błąd podczas tworzenia dokumentu lub generowania fiszek:", error);
+      return new Response(
+        JSON.stringify({
+          error: "Wystąpił błąd podczas przetwarzania żądania",
+          details: error instanceof Error ? error.message : "Nieznany błąd",
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
   } catch (error) {
-    logger.error("Błąd podczas tworzenia dokumentu:", error);
-
-    const errorMessage = error instanceof Error ? error.message : "Nieznany błąd";
-
+    logger.error("Nieoczekiwany błąd podczas przetwarzania żądania:", error);
     return new Response(
       JSON.stringify({
-        error: "Wystąpił błąd podczas przetwarzania żądania",
-        details: errorMessage,
+        error: "Wystąpił nieoczekiwany błąd",
+        details: error instanceof Error ? error.message : "Nieznany błąd",
       }),
       {
         status: 500,

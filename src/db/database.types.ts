@@ -89,11 +89,11 @@ export interface Database {
           front_modified: string | null;
           front_original: string;
           id: string;
-          is_ai_generated: boolean;
+          is_approved: boolean;
           is_disabled: boolean;
-          is_manually_created: boolean;
           is_modified: boolean;
           modification_percentage: number | null;
+          source: string; // 'ai' | 'manual'
           spaced_repetition_data: Json | null;
           topic_id: string | null;
           updated_at: string;
@@ -107,11 +107,11 @@ export interface Database {
           front_modified?: string | null;
           front_original: string;
           id?: string;
-          is_ai_generated?: boolean;
+          is_approved?: boolean;
           is_disabled?: boolean;
-          is_manually_created?: boolean;
           is_modified?: boolean;
           modification_percentage?: number | null;
+          source?: string; // 'ai' | 'manual'
           spaced_repetition_data?: Json | null;
           topic_id?: string | null;
           updated_at?: string;
@@ -125,11 +125,11 @@ export interface Database {
           front_modified?: string | null;
           front_original?: string;
           id?: string;
-          is_ai_generated?: boolean;
+          is_approved?: boolean;
           is_disabled?: boolean;
-          is_manually_created?: boolean;
           is_modified?: boolean;
           modification_percentage?: number | null;
+          source?: string; // 'ai' | 'manual'
           spaced_repetition_data?: Json | null;
           topic_id?: string | null;
           updated_at?: string;

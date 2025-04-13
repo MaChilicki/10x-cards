@@ -10,3 +10,4 @@ export const supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKe
 export type SupabaseClient = typeof supabaseClient;
 
 export const DEFAULT_USER_ID = "fcd55182-29aa-4ed9-b7ee-b04754f7ae28";
+export const DEFAULT_TOPIC_ID = "cb4762c2-c66b-4d6d-a645-6b23567e3bda";

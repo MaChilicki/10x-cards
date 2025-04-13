@@ -46,9 +46,9 @@ Fiszki (scalone z user_flashcards)
 - `back_original` TEXT NOT NULL
 - `front_modified` TEXT
 - `back_modified` TEXT
-- `is_ai_generated` BOOLEAN NOT NULL DEFAULT false
-- `is_manually_created` BOOLEAN NOT NULL DEFAULT false
+- `source` flashcard_source NOT NULL -- Typ enuma: 'ai' | 'manual'
 - `is_modified` BOOLEAN NOT NULL DEFAULT false
+- `is_approved` BOOLEAN NOT NULL DEFAULT false
 - `modification_percentage` SMALLINT CHECK (modification_percentage >= 0 AND modification_percentage <= 100)
 - `is_disabled` BOOLEAN NOT NULL DEFAULT false
 - `spaced_repetition_data` JSONB DEFAULT '{}'

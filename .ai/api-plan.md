@@ -5,7 +5,7 @@
 - **Users**: Managed by Supabase authentication; includes email, id, created_at, and updated_at.
 - **Topics**: Represents categories with hierarchical structure (table: topics) containing fields like id, user_id, name, description, and parent_id.
 - **Documents**: Source documents for flashcards (table: documents) with fields id, user_id, name, and content.
-- **Flashcards**: Contains flashcard data with original and modified content, flags for AI/manual generation, modification_percentage, and a soft delete flag (is_disabled).
+- **Flashcards**: Contains flashcard data with original and modified content, source information (ai or manual), modification_percentage, approval status, and a soft delete flag (is_disabled).
 - **Study Sessions**: Represents user study sessions with fields such as start_time, end_time, and cards_reviewed.
 - **Study Session Results**: Stores results for flashcards review (is_correct, response_time, difficulty_rating, etc.).
 - **User Statistics**: Aggregated statistics per user (total_cards_created, total_cards_studied, correct_answers, incorrect_answers, etc.).
@@ -304,7 +304,7 @@
 - **Query Parameters**: 
   - `page` (number), `limit` (number), `sort` (string)
   - `document_id` (string), `topic_id` (string)
-  - `is_ai_generated` (boolean, optional)
+  - `source` (string, 'ai' or 'manual', optional)
 - **Response Payload**:
   ```json
   {
@@ -318,9 +318,9 @@
         "back_original": "string",
         "front_modified": "string or null",
         "back_modified": "string or null",
-        "is_ai_generated": "boolean",
-        "is_manually_created": "boolean",
+        "source": "ai | manual",
         "is_modified": "boolean",
+        "is_approved": "boolean",
         "modification_percentage": "number",
         "is_disabled": "boolean",
         "spaced_repetition_data": {},
@@ -343,7 +343,8 @@
     "back_original": "string",
     "document_id": "string (optional)",
     "topic_id": "string (optional)",
-    "is_ai_generated": "boolean (optional)"
+    "source": "ai | manual",
+    "is_approved": "boolean (optional)"
   }
   ```
 - **Response Payload**:
@@ -357,9 +358,9 @@
     "back_original": "string",
     "front_modified": "string or null",
     "back_modified": "string or null",
-    "is_ai_generated": "boolean",
-    "is_manually_created": "boolean",
+    "source": "ai | manual",
     "is_modified": "boolean",
+    "is_approved": "boolean",
     "modification_percentage": "number",
     "is_disabled": "boolean",
     "spaced_repetition_data": {},
@@ -383,9 +384,9 @@
     "back_original": "string",
     "front_modified": "string or null",
     "back_modified": "string or null",
-    "is_ai_generated": "boolean",
-    "is_manually_created": "boolean",
+    "source": "ai | manual",
     "is_modified": "boolean",
+    "is_approved": "boolean",
     "modification_percentage": "number",
     "is_disabled": "boolean",
     "spaced_repetition_data": {},
@@ -416,9 +417,9 @@
     "back_original": "string",
     "front_modified": "string or null",
     "back_modified": "string or null",
-    "is_ai_generated": "boolean",
-    "is_manually_created": "boolean",
+    "source": "ai | manual",
     "is_modified": "boolean",
+    "is_approved": "boolean",
     "modification_percentage": "number",
     "is_disabled": "boolean",
     "spaced_repetition_data": {},
@@ -465,9 +466,9 @@
         "back_original": "string",
         "front_modified": "string or null",
         "back_modified": "string or null",
-        "is_ai_generated": "boolean",
-        "is_manually_created": "boolean",
+        "source": "ai",
         "is_modified": "boolean",
+        "is_approved": "boolean",
         "modification_percentage": "number",
         "is_disabled": "boolean",
         "spaced_repetition_data": {},
@@ -503,9 +504,9 @@
         "back_original": "string",
         "front_modified": "string or null",
         "back_modified": "string or null",
-        "is_ai_generated": "boolean",
-        "is_manually_created": "boolean",
+        "source": "ai",
         "is_modified": "boolean",
+        "is_approved": "boolean",
         "modification_percentage": "number",
         "is_disabled": "boolean",
         "spaced_repetition_data": {},
@@ -754,4 +755,4 @@ These endpoints are part of the complete system scope but are **not implemented 
 
 - **Security and Performance**:
   - Rate limiting, logging, and input sanitation are implemented at the gateway or middleware level to protect the system.
-  - Indexes defined in the schema (e.g., on user_id, topic_id) are leveraged to optimize query performance for list endpoints. 
+  - Indexes defined in the schema (e.g., on user_id, topic_id) are leveraged to optimize query performance for list endpoints.

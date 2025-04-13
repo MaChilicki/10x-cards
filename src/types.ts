@@ -38,7 +38,8 @@ export type FlashcardDto = Pick<
   | "document_id"
   | "created_at"
   | "modification_percentage"
-  | "is_ai_generated"
+  | "source"
+  | "is_approved"
   | "is_disabled"
 >;
 
@@ -68,6 +69,7 @@ export interface FlashcardCreateDto {
   topic_id?: string;
   document_id?: string;
   source: FlashcardSource;
+  is_approved: boolean;
 }
 
 export interface FlashcardsCreateCommand {
@@ -100,6 +102,7 @@ export interface FlashcardProposalDto {
   topic_id?: string;
   document_id?: string;
   source: "ai";
+  is_approved: boolean;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -138,6 +141,7 @@ export type DocumentDto = Document;
 export interface DocumentCreateDto {
   name: string;
   content: string;
+  topic_id?: string;
 }
 
 export type DocumentUpdateDto = Partial<{

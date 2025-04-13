@@ -6,6 +6,7 @@ export const documentCreateSchema = z.object({
     .string()
     .min(1000, "Treść dokumentu musi zawierać co najmniej 1000 znaków")
     .max(10000, "Treść dokumentu nie może przekraczać 10000 znaków"),
+  topic_id: z.string().uuid("Nieprawidłowy format UUID").optional(),
 });
 
 export type DocumentCreateSchema = typeof documentCreateSchema;
