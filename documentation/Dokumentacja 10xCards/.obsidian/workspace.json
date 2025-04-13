@@ -76,9 +76,23 @@
               "icon": "lucide-file",
               "title": "5. Tech stack"
             }
+          },
+          {
+            "id": "e4274c2edea3dc8a",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "6. Ustalenia dotyczące bazy danych - conversation summary.md",
+                "mode": "source",
+                "source": true
+              },
+              "icon": "lucide-file",
+              "title": "6. Ustalenia dotyczące bazy danych - conversation summary"
+            }
           }
         ],
-        "currentTab": 4
+        "currentTab": 5
       }
     ],
     "direction": "vertical"
@@ -150,7 +164,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "5. Tech stack.md",
+                "file": "6. Ustalenia dotyczące bazy danych - conversation summary.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -160,7 +174,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Łącza zwrotne do 5. Tech stack"
+              "title": "Łącza zwrotne do 6. Ustalenia dotyczące bazy danych - conversation summary"
             }
           },
           {
@@ -169,12 +183,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "5. Tech stack.md",
+                "file": "6. Ustalenia dotyczące bazy danych - conversation summary.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Linki wychodzące z 5. Tech stack"
+              "title": "Linki wychodzące z 6. Ustalenia dotyczące bazy danych - conversation summary"
             }
           },
           {
@@ -196,10 +210,10 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "5. Tech stack.md"
+                "file": "6. Ustalenia dotyczące bazy danych - conversation summary.md"
               },
               "icon": "lucide-list",
-              "title": "Zarys 5. Tech stack"
+              "title": "Zarys 6. Ustalenia dotyczące bazy danych - conversation summary"
             }
           }
         ]
@@ -219,10 +233,11 @@
       "command-palette:Otwórz paletę poleceń": false
     }
   },
-  "active": "0b530f8f76ba09f8",
+  "active": "e4274c2edea3dc8a",
   "lastOpenFiles": [
-    "4. Prompt do tworzenia PRD.md",
     "5. Tech stack.md",
+    "6. Ustalenia dotyczące bazy danych - conversation summary.md",
+    "4. Prompt do tworzenia PRD.md",
     "3. Podsumowanie sesji planistycznej PRD.md",
     "1. Koncepcja MVP.md",
     "2. Sesja planistyczna PRD.md",
