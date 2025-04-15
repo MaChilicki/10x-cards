@@ -66,18 +66,28 @@ Niektóre popularne komponenty to:
 - AlertDialog
 - AspectRatio
 - Avatar
+- Badge
+- Breadcrumb
+- Button
 - Calendar
+- Card
+- Carousel
 - Checkbox
 - Collapsible
+- Combobox
 - Command
 - ContextMenu
 - DataTable
 - DatePicker
+- Dialog
 - Dropdown Menu
 - Form
 - Hover Card
+- Input
+- Label
 - Menubar
 - Navigation Menu
+- Pagination
 - Popover
 - Progress
 - Radio Group
@@ -85,10 +95,12 @@ Niektóre popularne komponenty to:
 - Select
 - Separator
 - Sheet
+- Sidebar
 - Skeleton
 - Slider
 - Switch
 - Table
+- Tabs
 - Textarea
 - Sonner (previously Toast)
 - Toggle

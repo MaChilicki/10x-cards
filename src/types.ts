@@ -136,7 +136,10 @@ export interface TopicsListResponseDto {
 // ------------------------------------------------------------------------------------------------
 // Document DTOs
 // ------------------------------------------------------------------------------------------------
-export type DocumentDto = Document;
+export interface DocumentDto extends Document {
+  topic_id?: string;
+  has_flashcards?: boolean;
+}
 
 export interface DocumentCreateDto {
   name: string;
