@@ -15,7 +15,11 @@ interface NavigationPromptProps {
   onCancel: () => void;
 }
 
-export function NavigationPrompt({ isOpen, onConfirm, onCancel }: NavigationPromptProps) {
+export default function NavigationPrompt({
+  isOpen,
+  onConfirm,
+  onCancel
+}: NavigationPromptProps) {
   return (
     <AlertDialog open={isOpen}>
       <AlertDialogContent>

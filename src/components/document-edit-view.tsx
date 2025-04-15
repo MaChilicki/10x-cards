@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense, useCallback } from 'react';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -8,12 +8,13 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { DocumentEditForm } from '@/components/document-edit-form';
-import { NavigationPrompt } from '@/components/ui/navigation-prompt';
-import { RegenerationWarningDialog } from '@/components/ui/regeneration-warning-dialog';
-import { useDocumentForm } from '@/lib/hooks/useDocumentForm';
-import { useDocumentFetch } from '@/lib/hooks/useDocumentFetch';
-import { useGenerateFlashcards } from '@/lib/hooks/useGenerateFlashcards';
+import { useDocumentForm } from '@/lib/hooks/use-document-form';
+import { useDocumentFetch } from '@/lib/hooks/use-document-fetch';
+import { useGenerateFlashcards } from '@/lib/hooks/use-generate-flashcards';
 import type { DocumentCreateDto, DocumentUpdateDto, DocumentDto } from '@/types';
+
+const NavigationPrompt = lazy(() => import('@/components/ui/navigation-prompt'));
+const RegenerationWarningDialog = lazy(() => import('@/components/ui/regeneration-warning-dialog'));
 
 export function DocumentEditView() {
   // Pobieramy ID z parametrów URL
@@ -92,7 +93,7 @@ export function DocumentEditView() {
     }
   }, [documentId, fetchDocument]);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     if (isDirty) {
       setShowNavigationPrompt(true);
       setPendingNavigation(() => () => {
@@ -105,33 +106,37 @@ export function DocumentEditView() {
         ? `/topics/${topicId}/documents` 
         : '/documents';
     }
-  };
+  }, [isDirty, topicId]);
 
-  const handleConfirmNavigation = () => {
+  const handleConfirmNavigation = useCallback(() => {
     setShowNavigationPrompt(false);
     if (pendingNavigation) {
       pendingNavigation();
       setPendingNavigation(null);
     }
-  };
+  }, [pendingNavigation]);
 
-  const handleCancelNavigation = () => {
+  const handleCancelNavigation = useCallback(() => {
     setShowNavigationPrompt(false);
     setPendingNavigation(null);
-  };
+  }, []);
 
-  const handleGenerateFlashcards = async () => {
+  const handleGenerateFlashcards = useCallback(async () => {
     if (document?.has_flashcards) {
       setShowRegenerationWarning(true);
     } else {
       await generateFlashcards(values.content);
     }
-  };
+  }, [document?.has_flashcards, generateFlashcards, values.content]);
 
-  const handleConfirmRegeneration = async () => {
+  const handleConfirmRegeneration = useCallback(async () => {
     setShowRegenerationWarning(false);
     await generateFlashcards(values.content);
-  };
+  }, [generateFlashcards, values.content]);
+
+  const handleCloseRegenerationWarning = useCallback(() => {
+    setShowRegenerationWarning(false);
+  }, []);
 
   if (isLoadingDocument) {
     return <div>Ładowanie...</div>;
@@ -180,17 +185,23 @@ export function DocumentEditView() {
         errors={errors}
       />
 
-      <NavigationPrompt
-        isOpen={showNavigationPrompt}
-        onConfirm={handleConfirmNavigation}
-        onCancel={handleCancelNavigation}
-      />
+      <Suspense>
+        {showNavigationPrompt && (
+          <NavigationPrompt
+            isOpen={showNavigationPrompt}
+            onConfirm={handleConfirmNavigation}
+            onCancel={handleCancelNavigation}
+          />
+        )}
 
-      <RegenerationWarningDialog
-        isOpen={showRegenerationWarning}
-        onConfirm={handleConfirmRegeneration}
-        onCancel={() => setShowRegenerationWarning(false)}
-      />
+        {showRegenerationWarning && (
+          <RegenerationWarningDialog
+            isOpen={showRegenerationWarning}
+            onConfirm={handleConfirmRegeneration}
+            onCancel={handleCloseRegenerationWarning}
+          />
+        )}
+      </Suspense>
     </div>
   );
 } 

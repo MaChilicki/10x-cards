@@ -15,7 +15,7 @@ interface RegenerationWarningDialogProps {
   onCancel: () => void;
 }
 
-export function RegenerationWarningDialog({ 
+export default function RegenerationWarningDialog({ 
   isOpen, 
   onConfirm, 
   onCancel 
