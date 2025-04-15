@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense, useCallback } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -11,22 +11,23 @@ import { DocumentEditForm } from '@/components/document-edit-form';
 import { useDocumentForm } from '@/lib/hooks/use-document-form';
 import { useDocumentFetch } from '@/lib/hooks/use-document-fetch';
 import { useGenerateFlashcards } from '@/lib/hooks/use-generate-flashcards';
-import type { DocumentCreateDto, DocumentUpdateDto, DocumentDto } from '@/types';
+import { useTopicFetch } from '@/lib/hooks/use-topic-fetch';
+import { useRouteParams } from '@/lib/hooks/use-route-params';
+import { ErrorBoundary } from '@/components/error-boundary';
+import { DocumentViewSkeleton } from '@/components/ui/loading-states';
+import type { DocumentCreateDto, DocumentUpdateDto } from '@/types';
 
 const NavigationPrompt = lazy(() => import('@/components/ui/navigation-prompt'));
 const RegenerationWarningDialog = lazy(() => import('@/components/ui/regeneration-warning-dialog'));
 
 export function DocumentEditView() {
-  // Pobieramy ID z parametrów URL
-  const params = new URLSearchParams(window.location.search);
-  const documentId = params.get('id') || undefined;
-  const topicId = params.get('topic_id') || undefined;
-
+  const { documentId, topicId } = useRouteParams();
   const [showNavigationPrompt, setShowNavigationPrompt] = useState(false);
   const [showRegenerationWarning, setShowRegenerationWarning] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
 
   const { document, isLoading: isLoadingDocument, error: fetchError, fetchDocument } = useDocumentFetch(documentId);
+  const { topic, isLoading: isLoadingTopic, error: topicError, fetchTopic } = useTopicFetch(topicId);
   const { isGenerating, error: generateError, generateFlashcards } = useGenerateFlashcards(documentId);
 
   const initialValues: DocumentCreateDto = {
@@ -78,7 +79,6 @@ export function DocumentEditView() {
         }
 
         const data = await response.json();
-        // Przekierowanie do edycji nowo utworzonego dokumentu
         window.location.href = `/documents/${data.id}/edit`;
       }
     } catch (error) {
@@ -93,7 +93,13 @@ export function DocumentEditView() {
     }
   }, [documentId, fetchDocument]);
 
-  const handleCancel = useCallback(() => {
+  useEffect(() => {
+    if (topicId) {
+      fetchTopic();
+    }
+  }, [topicId, fetchTopic]);
+
+  const handleCancel = () => {
     if (isDirty) {
       setShowNavigationPrompt(true);
       setPendingNavigation(() => () => {
@@ -106,102 +112,117 @@ export function DocumentEditView() {
         ? `/topics/${topicId}/documents` 
         : '/documents';
     }
-  }, [isDirty, topicId]);
+  };
 
-  const handleConfirmNavigation = useCallback(() => {
+  const handleConfirmNavigation = () => {
     setShowNavigationPrompt(false);
     if (pendingNavigation) {
       pendingNavigation();
       setPendingNavigation(null);
     }
-  }, [pendingNavigation]);
+  };
 
-  const handleCancelNavigation = useCallback(() => {
+  const handleCancelNavigation = () => {
     setShowNavigationPrompt(false);
     setPendingNavigation(null);
-  }, []);
+  };
 
-  const handleGenerateFlashcards = useCallback(async () => {
+  const handleGenerateFlashcards = async () => {
     if (document?.has_flashcards) {
       setShowRegenerationWarning(true);
     } else {
-      await generateFlashcards(values.content);
+      try {
+        const result = await generateFlashcards(values.content);
+        if (result) {
+          window.location.href = `/documents/${documentId}/flashcards/approve`;
+        }
+      } catch (error) {
+        throw error;
+      }
     }
-  }, [document?.has_flashcards, generateFlashcards, values.content]);
+  };
 
-  const handleConfirmRegeneration = useCallback(async () => {
+  const handleConfirmRegeneration = async () => {
     setShowRegenerationWarning(false);
-    await generateFlashcards(values.content);
-  }, [generateFlashcards, values.content]);
+    try {
+      const result = await generateFlashcards(values.content);
+      if (result) {
+        window.location.href = `/documents/${documentId}/flashcards/approve`;
+      }
+    } catch (error) {
+      throw error;
+    }
+  };
 
-  const handleCloseRegenerationWarning = useCallback(() => {
-    setShowRegenerationWarning(false);
-  }, []);
-
-  if (isLoadingDocument) {
-    return <div>Ładowanie...</div>;
+  if (isLoadingDocument || isLoadingTopic) {
+    return (
+      <div className="container max-w-4xl mx-auto py-8">
+        <DocumentViewSkeleton />
+      </div>
+    );
   }
 
-  if (fetchError) {
-    return <div>Błąd: {fetchError}</div>;
+  if (fetchError || topicError) {
+    throw new Error(fetchError || topicError || 'Wystąpił nieoczekiwany błąd');
   }
 
   return (
-    <div className="container max-w-4xl mx-auto py-8">
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/documents">Dokumenty</BreadcrumbLink>
-          </BreadcrumbItem>
-          {topicId && (
-            <>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink href={`/topics/${topicId}/documents`}>
-                  {/* TODO: Dodać nazwę tematu */}
-                  Temat
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-            </>
+    <ErrorBoundary>
+      <div className="container max-w-4xl mx-auto py-8">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/documents">Dokumenty</BreadcrumbLink>
+            </BreadcrumbItem>
+            {topicId && (
+              <>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink href={`/topics/${topicId}/documents`}>
+                    {topic?.name || 'Temat'}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+              </>
+            )}
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{documentId ? 'Edycja dokumentu' : 'Nowy dokument'}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
+        <h1 className="text-3xl font-bold mb-8">
+          {documentId ? 'Edycja dokumentu' : 'Nowy dokument'}
+        </h1>
+
+        <DocumentEditForm
+          initialValues={values}
+          onSubmit={formHandleSubmit}
+          onCancel={handleCancel}
+          onGenerateFlashcards={handleGenerateFlashcards}
+          isSaving={isSubmitting}
+          isGenerating={isGenerating}
+          errors={errors}
+        />
+
+        <Suspense fallback={<DocumentViewSkeleton />}>
+          {showNavigationPrompt && (
+            <NavigationPrompt
+              isOpen={showNavigationPrompt}
+              onConfirm={handleConfirmNavigation}
+              onCancel={handleCancelNavigation}
+            />
           )}
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{documentId ? 'Edycja dokumentu' : 'Nowy dokument'}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
 
-      <h1 className="text-3xl font-bold mb-8">
-        {documentId ? 'Edycja dokumentu' : 'Nowy dokument'}
-      </h1>
-
-      <DocumentEditForm
-        initialValues={values}
-        onSubmit={formHandleSubmit}
-        onCancel={handleCancel}
-        onGenerateFlashcards={handleGenerateFlashcards}
-        isSaving={isSubmitting}
-        isGenerating={isGenerating}
-        errors={errors}
-      />
-
-      <Suspense>
-        {showNavigationPrompt && (
-          <NavigationPrompt
-            isOpen={showNavigationPrompt}
-            onConfirm={handleConfirmNavigation}
-            onCancel={handleCancelNavigation}
-          />
-        )}
-
-        {showRegenerationWarning && (
-          <RegenerationWarningDialog
-            isOpen={showRegenerationWarning}
-            onConfirm={handleConfirmRegeneration}
-            onCancel={handleCloseRegenerationWarning}
-          />
-        )}
-      </Suspense>
-    </div>
+          {showRegenerationWarning && (
+            <RegenerationWarningDialog
+              isOpen={showRegenerationWarning}
+              onConfirm={handleConfirmRegeneration}
+              onCancel={() => setShowRegenerationWarning(false)}
+            />
+          )}
+        </Suspense>
+      </div>
+    </ErrorBoundary>
   );
 } 
