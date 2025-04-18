@@ -10,13 +10,7 @@ interface TitleInputProps {
   disabled?: boolean;
 }
 
-export function TitleInput({ 
-  value, 
-  onChange, 
-  onBlur, 
-  error,
-  disabled 
-}: TitleInputProps) {
+export function TitleInput({ value, onChange, onBlur, error, disabled }: TitleInputProps) {
   return (
     <div className="space-y-2">
       <Label htmlFor="name">Tytuł dokumentu</Label>
@@ -34,4 +28,4 @@ export function TitleInput({
       {error && <ValidationMessage message={error} />}
     </div>
   );
-} 
+}

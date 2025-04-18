@@ -16,16 +16,11 @@ export function SubmitButtonGroup({
   onGenerateFlashcards,
   isSaving,
   isGenerating,
-  disableGenerate
+  disableGenerate,
 }: SubmitButtonGroupProps) {
   return (
     <div className="flex items-center justify-end space-x-4 mt-6">
-      <Button
-        type="button"
-        variant="outline"
-        onClick={onCancel}
-        disabled={isSaving || isGenerating}
-      >
+      <Button type="button" variant="outline" onClick={onCancel} disabled={isSaving || isGenerating}>
         Anuluj
       </Button>
       <Button
@@ -43,11 +38,7 @@ export function SubmitButtonGroup({
           "Generuj fiszki"
         )}
       </Button>
-      <Button
-        type="submit"
-        onClick={onSave}
-        disabled={isSaving || isGenerating}
-      >
+      <Button type="submit" onClick={onSave} disabled={isSaving || isGenerating}>
         {isSaving ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -59,4 +50,4 @@ export function SubmitButtonGroup({
       </Button>
     </div>
   );
-} 
+}

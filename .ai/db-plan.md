@@ -24,17 +24,11 @@ Hierarchiczna struktura tematów
 Dokumenty źródłowe do generowania fiszek
 - `id` UUID PRIMARY KEY DEFAULT uuid_generate_v4()
 - `user_id` UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE
+- `topic_id` UUID REFERENCES topics(id) ON DELETE SET NULL
 - `name` TEXT NOT NULL
 - `content` TEXT NOT NULL
 - `created_at` TIMESTAMPTZ NOT NULL DEFAULT now()
 - `updated_at` TIMESTAMPTZ NOT NULL DEFAULT now()
-
-### document_topics
-Relacja wiele-do-wielu między dokumentami a tematami
-- `document_id` UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE
-- `topic_id` UUID NOT NULL REFERENCES topics(id) ON DELETE CASCADE
-- `created_at` TIMESTAMPTZ NOT NULL DEFAULT now()
-- PRIMARY KEY (document_id, topic_id)
 
 ### flashcards
 Fiszki (scalone z user_flashcards)
@@ -95,13 +89,13 @@ Zagregowane statystyki użytkownika
 
 - **users-topics**: Jeden-do-wielu (Użytkownik może mieć wiele tematów)
 - **users-documents**: Jeden-do-wielu (Użytkownik może mieć wiele dokumentów)
+- **topics-documents**: Jeden-do-wielu (Jeden temat może zawierać wiele dokumentów)
 - **users-flashcards**: Jeden-do-wielu (Użytkownik może mieć wiele fiszek)
 - **users-study_sessions**: Jeden-do-wielu (Użytkownik może mieć wiele sesji nauki)
 - **users-user_statistics**: Jeden-do-jeden (Jeden użytkownik ma jeden rekord statystyk)
 - **topics-topics**: Jeden-do-wielu (Hierarchiczna struktura tematów)
 - **topics-flashcards**: Jeden-do-wielu (Jeden temat może zawierać wiele fiszek)
 - **documents-flashcards**: Jeden-do-wielu (Jeden dokument może być źródłem wielu fiszek)
-- **documents-topics**: Wiele-do-wielu (poprzez document_topics)
 - **flashcards-study_session_results**: Jeden-do-wielu (Jedna fiszka może mieć wiele wyników)
 - **study_sessions-study_session_results**: Jeden-do-wielu (Jedna sesja zawiera wiele wyników fiszek)
 
@@ -110,6 +104,7 @@ Zagregowane statystyki użytkownika
 - `idx_topics_user_id` ON topics(user_id)
 - `idx_topics_parent_id` ON topics(parent_id)
 - `idx_documents_user_id` ON documents(user_id)
+- `idx_documents_topic_id` ON documents(topic_id)
 - `idx_flashcards_user_id` ON flashcards(user_id)
 - `idx_flashcards_document_id` ON flashcards(document_id)
 - `idx_flashcards_topic_id` ON flashcards(topic_id)
@@ -158,19 +153,6 @@ CREATE POLICY "Użytkownicy mogą aktualizować tylko swoje dokumenty"
 CREATE POLICY "Użytkownicy mogą usuwać tylko swoje dokumenty" 
   ON documents FOR DELETE 
   USING (auth.uid() = user_id);
-```
-
-### document_topics
-```sql
-CREATE POLICY "Użytkownicy mogą zarządzać powiązaniami dokumentów z tematami" 
-  ON document_topics FOR ALL 
-  USING (
-    EXISTS (
-      SELECT 1 FROM documents 
-      WHERE documents.id = document_id 
-      AND documents.user_id = auth.uid()
-    )
-  );
 ```
 
 ### flashcards

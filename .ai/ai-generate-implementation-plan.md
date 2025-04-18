@@ -3,17 +3,16 @@
 # API Endpoint Implementation Plan: AI-Generated Flashcards
 
 ## 1. Przegląd punktu końcowego
-Celem endpointów jest automatyczne generowanie fiszek na podstawie przekazanego tekstu za pomocą zewnętrznego modelu AI. System obsługuje dwa endpointy:
+Celem endpointów jest automatyczne generowanie fiszek na podstawie przekazanego tekstu za pomocą zewnętrznego modelu AI. System obsługuje endpoint:
 - **POST /api/flashcards/ai-generate** – generacja fiszek na podstawie podanego tekstu.
-- **POST /api/flashcards/ai-regenerate** – ponowna generacja fiszek w przypadku odrzucenia poprzednich wyników.
 
-Oba endpointy mają służyć do przetwarzania tekstu wejściowego, komunikacji z systemem AI oraz zwracania wygenerowanych danych fiszek w zunifikowanej strukturze.
+Endpointy ma służyć do przetwarzania tekstu wejściowego, komunikacji z systemem AI oraz zwracania wygenerowanych danych fiszek w zunifikowanej strukturze.
 
 ## 2. Szczegóły żądania
 - **Metoda HTTP:** POST
 - **Struktura URL:**
   - `/api/flashcards/ai-generate` dla pierwszej generacji
-  - `/api/flashcards/ai-regenerate` dla ponownej generacji
+
 - **Parametry (Request Body):**
   - `text` (string, wymagany) – tekst wejściowy do generacji fiszek
     - *Walidacja:* Użycie zod do sprawdzenia, czy długość tekstu mieści się w przedziale 1000-10000 znaków
@@ -60,7 +59,7 @@ Oba endpointy mają służyć do przetwarzania tekstu wejściowego, komunikacji 
 ## 5. Przepływ danych
 1. Klient wysyła żądanie POST z danymi wejściowymi do odpowiedniego endpointu.
 2. Warstwa API waliduje dane wejściowe za pomocą bibliotek typu zod, w tym sprawdzenie, czy długość pola `text` mieści się w zakresie 1000-10000 znaków.
-3. Po udanej walidacji dane są przekazywane do warstwy serwisowej (np. `ai-generate.service` lub `ai-generate-flashcards.service`), która:
+3. Po udanej walidacji dane są przekazywane do warstwy serwisowej (np. `ai-generate.service`), która:
    - Komunikuje się z zewnętrznym API modelu AI w celu wygenerowania fiszek.
    - Przetwarza odpowiedź z modelu AI, dokonując ewentualnej filtracji lub transformacji danych.
    - *Odpowiedzi są zgodne z:* **FlashcardAiResponse** (zawierającym tablicę typu **FlashcardProposalDto**).
@@ -89,7 +88,7 @@ Oba endpointy mają służyć do przetwarzania tekstu wejściowego, komunikacji 
    - Utworzenie schematów z użyciem zod dla `FlashcardAiGenerateDto`, w tym walidacja długości pola `text` (1000-10000 znaków).
 2. **Implementacja endpointów:**
    - Utworzenie endpointu POST `/api/flashcards/ai-generate` z implementacją logiki walidacji oraz przekazania danych do serwisu.
-   - Utworzenie endpointu POST `/api/flashcards/ai-regenerate` z podobną logiką, umożliwiającej ponowną generację fiszek.
+   
 4. **Implementacja warstwy serwisowej:**
    - Wyodrębnienie logiki generacji fiszek do dedykowanego serwisu o nazwie **ai-generate.service** (ewentualnie **ai-generate-flashcards.service** dla większej przejrzystości).
    - Implementacja integracji z zewnętrznym API modelu AI (konfiguracja timeoutów, retry, obsługa błędów API).

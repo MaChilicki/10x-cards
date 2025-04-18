@@ -1,7 +1,7 @@
-import { Component } from 'react';
-import type { ErrorInfo, ReactNode } from 'react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { Component } from "react";
+import type { ErrorInfo, ReactNode } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   children: ReactNode;
@@ -16,7 +16,7 @@ interface State {
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
-    error: null
+    error: null,
   };
 
   public static getDerivedStateFromError(error: Error): State {
@@ -24,7 +24,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Uncaught error:', error, errorInfo);
+    console.error("Uncaught error:", error, errorInfo);
   }
 
   private handleReload = () => {
@@ -42,14 +42,8 @@ export class ErrorBoundary extends Component<Props, State> {
           <Alert variant="destructive" className="max-w-lg">
             <AlertTitle>Wystąpił błąd</AlertTitle>
             <AlertDescription className="mt-2">
-              <p className="mb-4">
-                {this.state.error?.message || 'Przepraszamy, coś poszło nie tak.'}
-              </p>
-              <Button
-                variant="outline"
-                onClick={this.handleReload}
-                className="w-full"
-              >
+              <p className="mb-4">{this.state.error?.message || "Przepraszamy, coś poszło nie tak."}</p>
+              <Button variant="outline" onClick={this.handleReload} className="w-full">
                 Odśwież stronę
               </Button>
             </AlertDescription>
@@ -60,4 +54,4 @@ export class ErrorBoundary extends Component<Props, State> {
 
     return this.props.children;
   }
-} 
+}

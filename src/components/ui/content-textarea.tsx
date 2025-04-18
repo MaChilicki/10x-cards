@@ -11,13 +11,7 @@ interface ContentTextareaProps {
   disabled?: boolean;
 }
 
-export function ContentTextarea({
-  value,
-  onChange,
-  onBlur,
-  error,
-  disabled
-}: ContentTextareaProps) {
+export function ContentTextarea({ value, onChange, onBlur, error, disabled }: ContentTextareaProps) {
   return (
     <div className="space-y-2">
       <Label htmlFor="content">Treść dokumentu</Label>
@@ -32,13 +26,9 @@ export function ContentTextarea({
         className="min-h-[300px] resize-y"
       />
       <div className="flex flex-col gap-1">
-        <CharacterCounter
-          count={value.length}
-          min={1000}
-          max={10000}
-        />
+        <CharacterCounter count={value.length} min={1000} max={10000} />
         {error && <ValidationMessage message={error} />}
       </div>
     </div>
   );
-} 
+}

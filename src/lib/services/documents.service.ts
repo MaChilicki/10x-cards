@@ -1,87 +1,153 @@
 import type { SupabaseClient } from "../../db/supabase.client";
 import { DEFAULT_USER_ID, DEFAULT_TOPIC_ID } from "../../db/supabase.client";
-import type { DocumentCreateDto, DocumentDto } from "../../types";
-import { logger } from "./logger.service";
+import type { DocumentDto, DocumentsListResponseDto } from "@/types";
+import type { DocumentsQueryParams, DocumentCreateParams, DocumentUpdateParams } from "../schemas/documents.schema";
 import { AiGenerateService } from "./ai-generate.service";
-import { FlashcardsService } from "./flashcards.service";
+import { logger } from "./logger.service";
 
+/**
+ * Serwis obsługujący operacje na dokumentach
+ * Zapewnia podstawowe operacje CRUD oraz integrację z generowaniem fiszek
+ */
 export class DocumentsService {
-  private aiService: AiGenerateService;
-  private flashcardsService: FlashcardsService;
+  constructor(
+    private readonly supabase: SupabaseClient,
+    private readonly aiGenerateService: AiGenerateService = new AiGenerateService(supabase)
+  ) {}
 
-  constructor(private supabase: SupabaseClient) {
-    this.aiService = new AiGenerateService(supabase);
-    this.flashcardsService = new FlashcardsService(supabase);
-  }
+  /**
+   * Pobiera listę dokumentów z możliwością filtrowania i paginacji
+   * @param params Parametry zapytania (strona, limit, sortowanie, nazwa)
+   * @returns Lista dokumentów i całkowita liczba wyników
+   * @throws Error gdy wystąpi problem z bazą danych
+   */
+  async listDocuments(params: DocumentsQueryParams): Promise<DocumentsListResponseDto> {
+    const { page, limit, sort, name } = params;
+    const offset = (page - 1) * limit;
 
-  async createDocument(data: DocumentCreateDto): Promise<DocumentDto> {
-    const topicId = (data.topic_id === null || data.topic_id === undefined) ? DEFAULT_TOPIC_ID : data.topic_id;
+    let query = this.supabase.from("documents").select("*", { count: "exact" });
 
-    const { data: document, error } = await this.supabase
-      .from("documents")
-      .insert([
-        {
-          name: data.name,
-          content: data.content,
-          user_id: DEFAULT_USER_ID,
-        },
-      ])
-      .select()
-      .single();
+    // Dodaj filtrowanie po nazwie, jeśli podano
+    if (name) {
+      query = query.ilike("name", `%${name}%`);
+    }
+
+    // Dodaj sortowanie
+    const [column, order] = sort.startsWith("-") ? [sort.slice(1), "desc" as const] : [sort, "asc" as const];
+    query = query.order(column, { ascending: order === "asc" });
+
+    // Dodaj paginację
+    query = query.range(offset, offset + limit - 1);
+
+    const { data, error, count } = await query;
 
     if (error) {
-      logger.error("Błąd Supabase przy tworzeniu dokumentu:", error);
-      throw new Error(`Błąd podczas tworzenia dokumentu: ${error.message}`);
+      logger.error("Błąd podczas pobierania listy dokumentów:", error);
+      throw new Error("Nie udało się pobrać listy dokumentów");
     }
 
-    try {
-      const { error: topicError } = await this.supabase
-        .from("document_topics")
-        .insert([
-          {
-            document_id: document.id,
-            topic_id: topicId,
-          },
-        ]);
-
-      if (topicError) {
-        throw new Error(`Błąd podczas przypisywania dokumentu do tematu: ${topicError.message}`);
-      }
-
-      await this.triggerFlashcardsGeneration(document, topicId);
-      return document;
-    } catch (error) {
-      // W przypadku błędu usuwamy utworzony dokument
-      logger.error("Błąd przy tworzeniu powiązań lub generowaniu fiszek:", error);
-      await this.supabase.from("documents").delete().eq("id", document.id);
-      throw error;
-    }
+    return {
+      documents: data as DocumentDto[],
+      total: count ?? 0,
+    };
   }
 
-  private async triggerFlashcardsGeneration(document: DocumentDto, topicId: string): Promise<void> {
+  /**
+   * Tworzy nowy dokument i inicjuje generowanie fiszek
+   * @param data Dane nowego dokumentu
+   * @returns Utworzony dokument
+   * @throws Error gdy wystąpi problem z bazą danych lub walidacją
+   */
+  async createDocument(data: DocumentCreateParams): Promise<DocumentDto> {
+    // Dodajemy user_id do danych dokumentu
+    const documentData = {
+      ...data,
+      user_id: DEFAULT_USER_ID,
+    };
+
+    const { data: document, error } = await this.supabase.from("documents").insert(documentData).select().single();
+
+    if (error) {
+      logger.error("Błąd podczas tworzenia dokumentu:", error);
+      throw new Error("Nie udało się utworzyć dokumentu");
+    }
+
+    // Asynchronicznie zainicjuj generowanie fiszek
     try {
-      logger.debug(`Rozpoczęto generowanie fiszek dla dokumentu ${document.id} w temacie ${topicId}`);
-      
-      const result = await this.aiService.generateFlashcards({
-        text: document.content,
+      logger.debug(`Rozpoczęto generowanie fiszek dla dokumentu ${document.id}`);
+
+      await this.aiGenerateService.generateFlashcards({
+        text: data.content,
         document_id: document.id,
-        topic_id: topicId
+        topic_id: data.topic_id,
       });
 
-      // Ustawiamy topic_id dla każdej fiszki i upewniamy się, że is_approved jest ustawione
-      const flashcardsWithTopic = result.flashcards.map(flashcard => ({
-        ...flashcard,
-        topic_id: topicId,
-        is_approved: flashcard.is_approved === undefined ? false : flashcard.is_approved
-      }));
-
-      // Przekazujemy user_id z dokumentu do serwisu fiszek
-      await this.flashcardsService.createFlashcards(flashcardsWithTopic, document.user_id);
-      
-      logger.info(`Pomyślnie wygenerowano i zapisano fiszki dla dokumentu ${document.id} w temacie ${topicId}`);
+      logger.info(`Pomyślnie zainicjowano generowanie fiszek dla dokumentu ${document.id}`);
     } catch (error) {
-      logger.error(`Błąd przy generowaniu fiszek dla dokumentu ${document.id}:`, error);
-      throw error;
+      logger.error("Błąd podczas inicjowania generowania fiszek:", error);
+      // Nie przerywamy flow w przypadku błędu generowania fiszek
+    }
+
+    return document as DocumentDto;
+  }
+
+  /**
+   * Pobiera dokument o określonym ID
+   * @param id ID dokumentu
+   * @returns Dokument
+   * @throws Error gdy dokument nie istnieje lub wystąpi problem z bazą danych
+   */
+  async getDocumentById(id: string): Promise<DocumentDto> {
+    const { data: document, error } = await this.supabase.from("documents").select("*").eq("id", id).single();
+
+    if (error) {
+      logger.error(`Błąd podczas pobierania dokumentu o ID ${id}:`, error);
+      throw new Error("Nie udało się pobrać dokumentu");
+    }
+
+    if (!document) {
+      throw new Error("Dokument nie istnieje");
+    }
+
+    return document as DocumentDto;
+  }
+
+  /**
+   * Aktualizuje istniejący dokument
+   * @param id ID dokumentu
+   * @param data Dane do aktualizacji
+   * @returns Zaktualizowany dokument
+   * @throws Error gdy wystąpi problem z bazą danych
+   */
+  async updateDocument(id: string, data: DocumentUpdateParams): Promise<DocumentDto> {
+    const { data: document, error } = await this.supabase.from("documents").update(data).eq("id", id).select().single();
+
+    if (error) {
+      logger.error(`Błąd podczas aktualizacji dokumentu o ID ${id}:`, error);
+      throw new Error("Nie udało się zaktualizować dokumentu");
+    }
+
+    return document as DocumentDto;
+  }
+
+  /**
+   * Usuwa dokument i powiązane z nim fiszki
+   * @param id ID dokumentu
+   * @throws Error gdy wystąpi problem z bazą danych
+   */
+  async deleteDocument(id: string): Promise<void> {
+    const { error: deleteFlashcardsError } = await this.supabase.from("flashcards").delete().eq("document_id", id);
+
+    if (deleteFlashcardsError) {
+      logger.error(`Błąd podczas usuwania fiszek dla dokumentu ${id}:`, deleteFlashcardsError);
+      throw new Error("Nie udało się usunąć powiązanych fiszek");
+    }
+
+    const { error: deleteDocumentError } = await this.supabase.from("documents").delete().eq("id", id);
+
+    if (deleteDocumentError) {
+      logger.error(`Błąd podczas usuwania dokumentu o ID ${id}:`, deleteDocumentError);
+      throw new Error("Nie udało się usunąć dokumentu");
     }
   }
 }

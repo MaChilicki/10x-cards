@@ -18,9 +18,7 @@ export interface DocumentFormProps {
 export interface FormContextType {
   values: FormValues;
   errors: Record<string, string>;
-  handleChange: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => void;
+  handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleSubmit: (values: FormValues) => Promise<void>;
   isDirty: boolean;
 }
@@ -31,4 +29,4 @@ export interface DocumentViewModel extends DocumentDto {
   isSaving: boolean;
   isGenerating: boolean;
   errors: Record<string, string>;
-} 
+}

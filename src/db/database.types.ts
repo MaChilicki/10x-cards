@@ -20,45 +20,13 @@ export interface Database {
   };
   public: {
     Tables: {
-      document_topics: {
-        Row: {
-          created_at: string;
-          document_id: string;
-          topic_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          document_id: string;
-          topic_id: string;
-        };
-        Update: {
-          created_at?: string;
-          document_id?: string;
-          topic_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "document_topics_document_id_fkey";
-            columns: ["document_id"];
-            isOneToOne: false;
-            referencedRelation: "documents";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "document_topics_topic_id_fkey";
-            columns: ["topic_id"];
-            isOneToOne: false;
-            referencedRelation: "topics";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       documents: {
         Row: {
           content: string;
           created_at: string;
           id: string;
           name: string;
+          topic_id: string | null;
           updated_at: string;
           user_id: string;
         };
@@ -67,6 +35,7 @@ export interface Database {
           created_at?: string;
           id?: string;
           name: string;
+          topic_id?: string | null;
           updated_at?: string;
           user_id: string;
         };
@@ -75,10 +44,19 @@ export interface Database {
           created_at?: string;
           id?: string;
           name?: string;
+          topic_id?: string | null;
           updated_at?: string;
           user_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "documents_topic_id_fkey";
+            columns: ["topic_id"];
+            isOneToOne: false;
+            referencedRelation: "topics";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       flashcards: {
         Row: {

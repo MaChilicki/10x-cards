@@ -11,35 +11,26 @@ export function DocumentEditForm({
   onGenerateFlashcards,
   isSaving,
   isGenerating,
-  errors
+  errors,
 }: DocumentFormProps) {
   const [values, setValues] = useState<FormValues>(initialValues);
 
-  const canGenerateFlashcards = 
-    values.content.length >= 1000 && 
-    values.content.length <= 10000;
+  const canGenerateFlashcards = values.content.length >= 1000 && values.content.length <= 10000;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(values);
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setValues(prev => ({ ...prev, [name]: value }));
+    setValues((prev) => ({ ...prev, [name]: value }));
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      <TitleInput
-        value={values.name}
-        onChange={handleChange}
-        error={errors.name}
-        disabled={isSaving || isGenerating}
-      />
-      
+      <TitleInput value={values.name} onChange={handleChange} error={errors.name} disabled={isSaving || isGenerating} />
+
       <ContentTextarea
         value={values.content}
         onChange={handleChange}
@@ -57,4 +48,4 @@ export function DocumentEditForm({
       />
     </form>
   );
-} 
+}

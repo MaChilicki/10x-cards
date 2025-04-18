@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import type { TopicDto } from '@/types';
+import { useState, useCallback } from "react";
+import type { TopicDto } from "@/types";
 
 interface UseTopicFetchResult {
   topic: TopicDto | null;
@@ -16,23 +16,26 @@ export function useTopicFetch(topicId?: string): UseTopicFetchResult {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchWithRetry = useCallback(async (retries = 0): Promise<TopicDto | null> => {
-    if (!topicId) return null;
+  const fetchWithRetry = useCallback(
+    async (retries = 0): Promise<TopicDto | null> => {
+      if (!topicId) return null;
 
-    try {
-      const response = await fetch(`/api/topics/${topicId}`);
-      if (!response.ok) {
-        throw new Error('Nie udało się pobrać tematu');
+      try {
+        const response = await fetch(`/api/topics/${topicId}`);
+        if (!response.ok) {
+          throw new Error("Nie udało się pobrać tematu");
+        }
+        return await response.json();
+      } catch (err) {
+        if (retries < MAX_RETRIES) {
+          await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
+          return fetchWithRetry(retries + 1);
+        }
+        throw err;
       }
-      return await response.json();
-    } catch (err) {
-      if (retries < MAX_RETRIES) {
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-        return fetchWithRetry(retries + 1);
-      }
-      throw err;
-    }
-  }, [topicId]);
+    },
+    [topicId]
+  );
 
   const fetchTopic = useCallback(async () => {
     if (!topicId) {
@@ -47,7 +50,7 @@ export function useTopicFetch(topicId?: string): UseTopicFetchResult {
       const data = await fetchWithRetry();
       setTopic(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Wystąpił nieoczekiwany błąd');
+      setError(err instanceof Error ? err.message : "Wystąpił nieoczekiwany błąd");
       setTopic(null);
     } finally {
       setIsLoading(false);
@@ -58,6 +61,6 @@ export function useTopicFetch(topicId?: string): UseTopicFetchResult {
     topic,
     isLoading,
     error,
-    fetchTopic
+    fetchTopic,
   };
-} 
+}

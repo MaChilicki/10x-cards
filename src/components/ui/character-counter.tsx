@@ -13,16 +13,15 @@ export function CharacterCounter({ count, min, max, className }: CharacterCounte
   const isOverMax = count > max;
 
   return (
-    <div className={cn(
-      "text-sm mt-2 flex items-center justify-end space-x-2",
-      className
-    )}>
-      <span className={cn(
-        "font-medium",
-        isValid && "text-muted-foreground",
-        isUnderMin && "text-yellow-500",
-        isOverMax && "text-destructive"
-      )}>
+    <div className={cn("text-sm mt-2 flex items-center justify-end space-x-2", className)}>
+      <span
+        className={cn(
+          "font-medium",
+          isValid && "text-muted-foreground",
+          isUnderMin && "text-yellow-500",
+          isOverMax && "text-destructive"
+        )}
+      >
         {count}
       </span>
       <span className="text-muted-foreground">
@@ -30,4 +29,4 @@ export function CharacterCounter({ count, min, max, className }: CharacterCounte
       </span>
     </div>
   );
-} 
+}

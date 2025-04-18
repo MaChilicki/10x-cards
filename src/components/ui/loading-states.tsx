@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function DocumentFormSkeleton() {
   return (
@@ -38,4 +38,4 @@ export function DocumentViewSkeleton() {
       <DocumentFormSkeleton />
     </div>
   );
-} 
+}

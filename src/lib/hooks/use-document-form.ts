@@ -1,10 +1,7 @@
-import { useState, useCallback } from 'react';
-import type { FormValues } from '../types/document-edit.types';
+import { useState, useCallback } from "react";
+import type { FormValues } from "../types/document-edit.types";
 
-export const useDocumentForm = (
-  initialValues: FormValues,
-  onSubmit: (values: FormValues) => Promise<void>
-) => {
+export const useDocumentForm = (initialValues: FormValues, onSubmit: (values: FormValues) => Promise<void>) => {
   const [values, setValues] = useState<FormValues>(initialValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isDirty, setIsDirty] = useState(false);
@@ -27,14 +24,16 @@ export const useDocumentForm = (
       newErrors.content = "Treść nie może przekraczać 10000 znaków";
     }
 
+    if (!formValues.topic_id) {
+      newErrors.topic_id = "Temat jest wymagany";
+    }
+
     return newErrors;
   }, []);
 
-  const handleChange = useCallback((
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setValues(prev => ({ ...prev, [name]: value }));
+    setValues((prev) => ({ ...prev, [name]: value }));
     setIsDirty(true);
   }, []);
 
@@ -70,6 +69,6 @@ export const useDocumentForm = (
     handleChange,
     handleSubmit,
     validate,
-    reset
+    reset,
   };
-}; 
+};

@@ -34,13 +34,19 @@ export type FlashcardDto = Pick<
   | "id"
   | "front_original"
   | "back_original"
+  | "front_modified"
+  | "back_modified"
   | "topic_id"
   | "document_id"
   | "created_at"
+  | "updated_at"
+  | "user_id"
   | "modification_percentage"
   | "source"
   | "is_approved"
+  | "is_modified"
   | "is_disabled"
+  | "spaced_repetition_data"
 >;
 
 // ------------------------------------------------------------------------------------------------
@@ -89,7 +95,7 @@ export type FlashcardUpdateDto = Partial<{
 // ------------------------------------------------------------------------------------------------
 export interface FlashcardAiGenerateDto {
   text: string;
-  topic_id?: string;
+  topic_id: string;
   document_id?: string;
 }
 
@@ -137,14 +143,13 @@ export interface TopicsListResponseDto {
 // Document DTOs
 // ------------------------------------------------------------------------------------------------
 export interface DocumentDto extends Document {
-  topic_id?: string;
   has_flashcards?: boolean;
 }
 
 export interface DocumentCreateDto {
   name: string;
   content: string;
-  topic_id?: string;
+  topic_id: string;
 }
 
 export type DocumentUpdateDto = Partial<{

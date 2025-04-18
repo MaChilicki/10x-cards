@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from 'react';
+import { useEffect, useState, lazy, Suspense } from "react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -7,18 +7,18 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { DocumentEditForm } from '@/components/document-edit-form';
-import { useDocumentForm } from '@/lib/hooks/use-document-form';
-import { useDocumentFetch } from '@/lib/hooks/use-document-fetch';
-import { useGenerateFlashcards } from '@/lib/hooks/use-generate-flashcards';
-import { useTopicFetch } from '@/lib/hooks/use-topic-fetch';
-import { useRouteParams } from '@/lib/hooks/use-route-params';
-import { ErrorBoundary } from '@/components/error-boundary';
-import { DocumentViewSkeleton } from '@/components/ui/loading-states';
-import type { DocumentCreateDto, DocumentUpdateDto } from '@/types';
+import { DocumentEditForm } from "@/components/document-edit-form";
+import { useDocumentForm } from "@/lib/hooks/use-document-form";
+import { useDocumentFetch } from "@/lib/hooks/use-document-fetch";
+import { useGenerateFlashcards } from "@/lib/hooks/use-generate-flashcards";
+import { useTopicFetch } from "@/lib/hooks/use-topic-fetch";
+import { useRouteParams } from "@/lib/hooks/use-route-params";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { DocumentViewSkeleton } from "@/components/ui/loading-states";
+import type { DocumentCreateDto, DocumentUpdateDto } from "@/types";
 
-const NavigationPrompt = lazy(() => import('@/components/ui/navigation-prompt'));
-const RegenerationWarningDialog = lazy(() => import('@/components/ui/regeneration-warning-dialog'));
+const NavigationPrompt = lazy(() => import("@/components/ui/navigation-prompt"));
+const RegenerationWarningDialog = lazy(() => import("@/components/ui/regeneration-warning-dialog"));
 
 export function DocumentEditView() {
   const { documentId, topicId } = useRouteParams();
@@ -30,10 +30,17 @@ export function DocumentEditView() {
   const { topic, isLoading: isLoadingTopic, error: topicError, fetchTopic } = useTopicFetch(topicId);
   const { isGenerating, error: generateError, generateFlashcards } = useGenerateFlashcards(documentId);
 
+  // Przekieruj do listy dokumentów, jeśli nie ma wybranego tematu
+  useEffect(() => {
+    if (!isLoadingDocument && !isLoadingTopic && !documentId && !topicId) {
+      window.location.href = "/documents";
+    }
+  }, [isLoadingDocument, isLoadingTopic, documentId, topicId]);
+
   const initialValues: DocumentCreateDto = {
-    name: document?.name ?? '',
-    content: document?.content ?? '',
-    topic_id: document?.topic_id ?? topicId
+    name: document?.name ?? "",
+    content: document?.content ?? "",
+    topic_id: document?.topic_id ?? topicId ?? "",
   };
 
   const {
@@ -43,46 +50,46 @@ export function DocumentEditView() {
     isSubmitting,
     handleChange,
     handleSubmit: formHandleSubmit,
-    reset
+    reset,
   } = useDocumentForm(initialValues, async (values: DocumentCreateDto) => {
     try {
       if (documentId) {
         // Aktualizacja istniejącego dokumentu
         const updateData: DocumentUpdateDto = {
           name: values.name,
-          content: values.content
+          content: values.content,
         };
 
         const response = await fetch(`/api/documents/${documentId}`, {
-          method: 'PUT',
+          method: "PUT",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(updateData),
         });
 
         if (!response.ok) {
-          throw new Error('Nie udało się zaktualizować dokumentu');
+          throw new Error("Nie udało się zaktualizować dokumentu");
         }
       } else {
         // Tworzenie nowego dokumentu
-        const response = await fetch('/api/documents', {
-          method: 'POST',
+        const response = await fetch("/api/documents", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(values),
         });
 
         if (!response.ok) {
-          throw new Error('Nie udało się utworzyć dokumentu');
+          throw new Error("Nie udało się utworzyć dokumentu");
         }
 
         const data = await response.json();
         window.location.href = `/documents/${data.id}/edit`;
       }
     } catch (error) {
-      console.error('Błąd podczas zapisywania dokumentu:', error);
+      console.error("Błąd podczas zapisywania dokumentu:", error);
       throw error;
     }
   });
@@ -103,14 +110,10 @@ export function DocumentEditView() {
     if (isDirty) {
       setShowNavigationPrompt(true);
       setPendingNavigation(() => () => {
-        window.location.href = topicId 
-          ? `/topics/${topicId}/documents` 
-          : '/documents';
+        window.location.href = topicId ? `/topics/${topicId}/documents` : "/documents";
       });
     } else {
-      window.location.href = topicId 
-        ? `/topics/${topicId}/documents` 
-        : '/documents';
+      window.location.href = topicId ? `/topics/${topicId}/documents` : "/documents";
     }
   };
 
@@ -163,7 +166,7 @@ export function DocumentEditView() {
   }
 
   if (fetchError || topicError) {
-    throw new Error(fetchError || topicError || 'Wystąpił nieoczekiwany błąd');
+    throw new Error(fetchError || topicError || "Wystąpił nieoczekiwany błąd");
   }
 
   return (
@@ -178,22 +181,18 @@ export function DocumentEditView() {
               <>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
-                  <BreadcrumbLink href={`/topics/${topicId}/documents`}>
-                    {topic?.name || 'Temat'}
-                  </BreadcrumbLink>
+                  <BreadcrumbLink href={`/topics/${topicId}/documents`}>{topic?.name || "Temat"}</BreadcrumbLink>
                 </BreadcrumbItem>
               </>
             )}
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>{documentId ? 'Edycja dokumentu' : 'Nowy dokument'}</BreadcrumbPage>
+              <BreadcrumbPage>{documentId ? "Edycja dokumentu" : "Nowy dokument"}</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
 
-        <h1 className="text-3xl font-bold mb-8">
-          {documentId ? 'Edycja dokumentu' : 'Nowy dokument'}
-        </h1>
+        <h1 className="text-3xl font-bold mb-8">{documentId ? "Edycja dokumentu" : "Nowy dokument"}</h1>
 
         <DocumentEditForm
           initialValues={values}
@@ -225,4 +224,4 @@ export function DocumentEditView() {
       </div>
     </ErrorBoundary>
   );
-} 
+}

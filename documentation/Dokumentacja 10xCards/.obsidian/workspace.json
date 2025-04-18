@@ -90,9 +90,21 @@
               "icon": "lucide-file",
               "title": "6. Ustalenia dotyczące bazy danych - conversation summary"
             }
+          },
+          {
+            "id": "64a8da0a80533d04",
+            "type": "leaf",
+            "state": {
+              "type": "release-notes",
+              "state": {
+                "currentVersion": "1.8.9"
+              },
+              "icon": "lucide-book-up",
+              "title": "Release Notes 1.8.9"
+            }
           }
         ],
-        "currentTab": 5
+        "currentTab": 6
       }
     ],
     "direction": "vertical"
@@ -111,7 +123,8 @@
             "state": {
               "type": "file-explorer",
               "state": {
-                "sortOrder": "alphabetical"
+                "sortOrder": "alphabetical",
+                "autoReveal": false
               },
               "icon": "lucide-folder-closed",
               "title": "Przeglądarka plików"
@@ -225,15 +238,15 @@
   },
   "left-ribbon": {
     "hiddenItems": {
-      "switcher:Otwórz okno szybkiej zmiany pliku": false,
+      "switcher:Otwórz okno szybkiego wyboru": false,
+      "canvas:Stwórz nową tablicę": false,
+      "daily-notes:Otwórz codzienną notatkę": false,
+      "command-palette:Otwórz listę poleceń": false,
       "graph:Otwórz graf": false,
-      "canvas:Stwórz nowe płótno": false,
-      "daily-notes:Otwórz dzisiejszą notatkę": false,
-      "templates:Wstaw szablon": false,
-      "command-palette:Otwórz paletę poleceń": false
+      "templates:Wstaw szablon": false
     }
   },
-  "active": "e4274c2edea3dc8a",
+  "active": "64a8da0a80533d04",
   "lastOpenFiles": [
     "7. Podsumowanie sesji planistycznej UI.md",
     "5. Tech stack.md",
