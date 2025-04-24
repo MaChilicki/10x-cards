@@ -117,7 +117,7 @@
   }
   ```
 - **Success Codes**: 200 OK
-- **Error Codes**: 401 Unauthorized, 500 Internal Server Error
+- **Error Codes**: 400 Bad Request, 500 Internal Server Error
 
 #### 2. POST /api/topics
 - **Description**: Create a new topic.
@@ -142,7 +142,7 @@
   }
   ```
 - **Success Codes**: 201 Created
-- **Error Codes**: 400 Bad Request, 401 Unauthorized
+- **Error Codes**: 400 Bad Request, 401 Unauthorized, 415 Unsupported Media Type, 500 Internal Server Error
 
 #### 3. GET /api/topics/{id}
 - **Description**: Retrieve details of a specific topic.
@@ -159,7 +159,7 @@
   }
   ```
 - **Success Codes**: 200 OK
-- **Error Codes**: 401 Unauthorized, 404 Not Found
+- **Error Codes**: 400 Bad Request, 404 Not Found, 500 Internal Server Error
 
 #### 4. PUT /api/topics/{id}
 - **Description**: Update an existing topic.
@@ -183,7 +183,7 @@
   }
   ```
 - **Success Codes**: 200 OK
-- **Error Codes**: 400 Bad Request, 401 Unauthorized, 404 Not Found
+- **Error Codes**: 400 Bad Request, 401 Unauthorized, 404 Not Found, 415 Unsupported Media Type, 500 Internal Server Error
 
 #### 5. DELETE /api/topics/{id}
 - **Description**: Delete a topic.
@@ -193,8 +193,8 @@
     "message": "Topic deleted successfully"
   }
   ```
-- **Success Codes**: 200 OK
-- **Error Codes**: 401 Unauthorized, 404 Not Found
+- **Success Codes**: 204 No Content
+- **Error Codes**: 400 Bad Request, 404 Not Found, 409 Conflict (if topic has children or documents), 500 Internal Server Error
 
 ### Documents Endpoints
 

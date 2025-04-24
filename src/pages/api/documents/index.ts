@@ -3,13 +3,14 @@ import { documentCreateSchema, documentsQuerySchema } from "../../../lib/schemas
 import { DocumentsService } from "../../../lib/services/documents.service";
 import { logger } from "../../../lib/services/logger.service";
 import { AiGenerateService } from "../../../lib/services/ai-generate.service";
+import type { DocumentCreateDto } from "@/types";
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ url, locals }) => {
   try {
-    const params = Object.fromEntries(url.searchParams);
-    const validationResult = documentsQuerySchema.safeParse(params);
+    const searchParams = Object.fromEntries(url.searchParams);
+    const validationResult = documentsQuerySchema.safeParse(searchParams);
 
     if (!validationResult.success) {
       return new Response(
@@ -88,7 +89,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
 
-    let body;
+    let body: DocumentCreateDto;
     try {
       body = await request.json();
     } catch {
@@ -132,12 +133,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Automatyczne generowanie fiszek po utworzeniu dokumentu
       try {
-        // Sprawdzamy czy dokument ma przypisany temat
         if (!document.topic_id) {
           throw new Error("Dokument nie ma przypisanego tematu");
         }
 
-        // Sprawdź czy dokument ma już fiszki
         const { data: existingFlashcards, error: flashcardsError } = await locals.supabase
           .from("flashcards")
           .select("id")
@@ -164,7 +163,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         logger.info(`Pomyślnie wygenerowano fiszki dla dokumentu ${document.id}`);
       } catch (flashcardsError) {
         logger.error(`Błąd podczas generowania fiszek dla dokumentu ${document.id}:`, flashcardsError);
-        // Nie zwracamy błędu do klienta, ponieważ dokument został utworzony pomyślnie
       }
 
       return new Response(JSON.stringify(document), {
@@ -188,7 +186,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
   } catch (error) {
-    logger.error("Nieoczekiwany błąd podczas przetwarzania żądania:", error);
+    logger.error("Nieoczekiwany błąd podczas przetwarzania żądania POST:", error);
     return new Response(
       JSON.stringify({
         error: {

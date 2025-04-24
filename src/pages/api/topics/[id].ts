@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { TopicsService } from "../../../lib/services/topics.service";
-import { topicUpdateSchema, topicIdSchema } from "../../../lib/schemas/topics.schema";
+import { topicIdSchema, topicUpdateSchema } from "../../../lib/schemas/topics.schema";
 import { logger } from "../../../lib/services/logger.service";
 
 export const prerender = false;
@@ -35,12 +35,9 @@ export const GET: APIRoute = async ({ params, locals }) => {
     if (!idValidation.success) {
       return new Response(
         JSON.stringify({
-          error: {
-            code: "INVALID_PARAMETER",
-            message: "Nieprawidłowe ID tematu",
-            details: idValidation.error,
-            validationErrors: "details" in idValidation ? idValidation.details : undefined,
-          },
+          error: "Nieprawidłowe ID tematu",
+          details: idValidation.error,
+          validationErrors: "details" in idValidation ? idValidation.details : undefined,
         }),
         {
           status: 400,
@@ -61,10 +58,8 @@ export const GET: APIRoute = async ({ params, locals }) => {
       if (error instanceof Error && error.message.includes("nie został znaleziony")) {
         return new Response(
           JSON.stringify({
-            error: {
-              code: "TOPIC_NOT_FOUND",
-              message: "Temat nie został znaleziony",
-            },
+            error: "Nie znaleziono tematu",
+            details: "Temat o podanym ID nie istnieje",
           }),
           {
             status: 404,
@@ -72,17 +67,25 @@ export const GET: APIRoute = async ({ params, locals }) => {
           }
         );
       }
-      throw error;
+
+      logger.error(`Błąd podczas pobierania tematu ${idValidation.id}:`, error);
+      return new Response(
+        JSON.stringify({
+          error: "Wystąpił błąd podczas pobierania tematu",
+          details: error instanceof Error ? error.message : "Nieznany błąd",
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
   } catch (error) {
-    logger.error("Błąd podczas pobierania tematu:", error);
+    logger.error("Nieoczekiwany błąd podczas przetwarzania żądania GET:", error);
     return new Response(
       JSON.stringify({
-        error: {
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Wystąpił błąd podczas przetwarzania żądania",
-          details: error instanceof Error ? error.message : "Nieznany błąd",
-        },
+        error: "Wystąpił nieoczekiwany błąd",
+        details: error instanceof Error ? error.message : "Nieznany błąd",
       }),
       {
         status: 500,
@@ -98,12 +101,8 @@ export const PUT: APIRoute = async ({ request, params, locals }) => {
     if (!idValidation.success) {
       return new Response(
         JSON.stringify({
-          error: {
-            code: "INVALID_PARAMETER",
-            message: "Nieprawidłowe ID tematu",
-            details: idValidation.error,
-            validationErrors: "details" in idValidation ? idValidation.details : undefined,
-          },
+          error: "Nieprawidłowe ID tematu",
+          details: idValidation.error,
         }),
         {
           status: 400,
@@ -115,11 +114,8 @@ export const PUT: APIRoute = async ({ request, params, locals }) => {
     if (!request.headers.get("Content-Type")?.includes("application/json")) {
       return new Response(
         JSON.stringify({
-          error: {
-            code: "INVALID_CONTENT_TYPE",
-            message: "Nieprawidłowy format danych",
-            details: "Wymagany Content-Type: application/json",
-          },
+          error: "Nieprawidłowy format danych",
+          details: "Wymagany Content-Type: application/json",
         }),
         {
           status: 415,
@@ -134,11 +130,8 @@ export const PUT: APIRoute = async ({ request, params, locals }) => {
     } catch {
       return new Response(
         JSON.stringify({
-          error: {
-            code: "INVALID_JSON",
-            message: "Nieprawidłowy format JSON",
-            details: "Nie można sparsować body requestu",
-          },
+          error: "Nieprawidłowy format JSON",
+          details: "Nie można sparsować body requestu",
         }),
         {
           status: 400,
@@ -149,15 +142,10 @@ export const PUT: APIRoute = async ({ request, params, locals }) => {
 
     const validationResult = topicUpdateSchema.safeParse(body);
     if (!validationResult.success) {
-      logger.info("Nieprawidłowe dane wejściowe dla aktualizacji tematu:");
-      logger.error("Szczegóły błędów walidacji:", validationResult.error.format());
       return new Response(
         JSON.stringify({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Nieprawidłowe dane wejściowe",
-            details: validationResult.error.format(),
-          },
+          error: "Nieprawidłowe dane wejściowe",
+          details: validationResult.error.errors,
         }),
         {
           status: 400,
@@ -175,47 +163,24 @@ export const PUT: APIRoute = async ({ request, params, locals }) => {
         headers: { "Content-Type": "application/json" },
       });
     } catch (error) {
-      if (error instanceof Error) {
-        if (error.message.includes("nie został znaleziony")) {
-          return new Response(
-            JSON.stringify({
-              error: {
-                code: "TOPIC_NOT_FOUND",
-                message: "Temat nie został znaleziony",
-              },
-            }),
-            {
-              status: 404,
-              headers: { "Content-Type": "application/json" },
-            }
-          );
+      logger.error(`Błąd podczas aktualizacji tematu ${idValidation.id}:`, error);
+      return new Response(
+        JSON.stringify({
+          error: "Wystąpił błąd podczas aktualizacji tematu",
+          details: error instanceof Error ? error.message : "Nieznany błąd",
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
         }
-        if (error.message.includes("już istnieje")) {
-          return new Response(
-            JSON.stringify({
-              error: {
-                code: "TOPIC_EXISTS",
-                message: error.message,
-              },
-            }),
-            {
-              status: 409,
-              headers: { "Content-Type": "application/json" },
-            }
-          );
-        }
-      }
-      throw error;
+      );
     }
   } catch (error) {
-    logger.error("Błąd podczas aktualizacji tematu:", error);
+    logger.error("Nieoczekiwany błąd podczas przetwarzania żądania PUT:", error);
     return new Response(
       JSON.stringify({
-        error: {
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Wystąpił błąd podczas przetwarzania żądania",
-          details: error instanceof Error ? error.message : "Nieznany błąd",
-        },
+        error: "Wystąpił nieoczekiwany błąd",
+        details: error instanceof Error ? error.message : "Nieznany błąd",
       }),
       {
         status: 500,
@@ -231,12 +196,8 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     if (!idValidation.success) {
       return new Response(
         JSON.stringify({
-          error: {
-            code: "INVALID_PARAMETER",
-            message: "Nieprawidłowe ID tematu",
-            details: idValidation.error,
-            validationErrors: "details" in idValidation ? idValidation.details : undefined,
-          },
+          error: "Nieprawidłowe ID tematu",
+          details: idValidation.error,
         }),
         {
           status: 400,
@@ -249,24 +210,14 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 
     try {
       await topicsService.delete(idValidation.id);
-      return new Response(
-        JSON.stringify({
-          message: "Temat został pomyślnie usunięty",
-        }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      return new Response(null, { status: 204 });
     } catch (error) {
       if (error instanceof Error) {
         if (error.message.includes("nie został znaleziony")) {
           return new Response(
             JSON.stringify({
-              error: {
-                code: "TOPIC_NOT_FOUND",
-                message: "Temat nie został znaleziony",
-              },
+              error: "Nie znaleziono tematu",
+              details: "Temat o podanym ID nie istnieje",
             }),
             {
               status: 404,
@@ -274,13 +225,35 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
             }
           );
         }
-        if (error.message.includes("nie można usunąć")) {
+        if (error.message.includes("ma podrzędne tematy")) {
           return new Response(
             JSON.stringify({
-              error: {
-                code: "TOPIC_IN_USE",
-                message: error.message,
-              },
+              error: "Nie można usunąć tematu",
+              details: "Temat posiada podrzędne tematy. Usuń najpierw wszystkie podtematy.",
+            }),
+            {
+              status: 409,
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+        }
+        if (error.message.includes("ma przypisane dokumenty")) {
+          return new Response(
+            JSON.stringify({
+              error: "Nie można usunąć tematu",
+              details: "Temat posiada przypisane dokumenty. Usuń najpierw wszystkie dokumenty.",
+            }),
+            {
+              status: 409,
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+        }
+        if (error.message.includes("ma przypisane fiszki")) {
+          return new Response(
+            JSON.stringify({
+              error: "Nie można usunąć tematu",
+              details: "Temat posiada przypisane fiszki. Usuń najpierw wszystkie fiszki.",
             }),
             {
               status: 409,
@@ -289,17 +262,24 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
           );
         }
       }
-      throw error;
+      logger.error(`Błąd podczas usuwania tematu ${idValidation.id}:`, error);
+      return new Response(
+        JSON.stringify({
+          error: "Wystąpił błąd podczas usuwania tematu",
+          details: error instanceof Error ? error.message : "Nieznany błąd",
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
   } catch (error) {
-    logger.error("Błąd podczas usuwania tematu:", error);
+    logger.error("Nieoczekiwany błąd podczas przetwarzania żądania DELETE:", error);
     return new Response(
       JSON.stringify({
-        error: {
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Wystąpił błąd podczas przetwarzania żądania",
-          details: error instanceof Error ? error.message : "Nieznany błąd",
-        },
+        error: "Wystąpił nieoczekiwany błąd",
+        details: error instanceof Error ? error.message : "Nieznany błąd",
       }),
       {
         status: 500,

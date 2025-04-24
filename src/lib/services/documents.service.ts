@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "../../db/supabase.client";
-import { DEFAULT_USER_ID, DEFAULT_TOPIC_ID } from "../../db/supabase.client";
+import { DEFAULT_USER_ID } from "../../db/supabase.client";
 import type { DocumentDto, DocumentsListResponseDto } from "@/types";
 import type { DocumentsQueryParams, DocumentCreateParams, DocumentUpdateParams } from "../schemas/documents.schema";
 import { AiGenerateService } from "./ai-generate.service";
@@ -22,10 +22,15 @@ export class DocumentsService {
    * @throws Error gdy wystąpi problem z bazą danych
    */
   async listDocuments(params: DocumentsQueryParams): Promise<DocumentsListResponseDto> {
-    const { page, limit, sort, name } = params;
+    const { page, limit, sort, name, topic_id } = params;
     const offset = (page - 1) * limit;
 
     let query = this.supabase.from("documents").select("*", { count: "exact" });
+
+    // Dodaj filtrowanie po topic_id
+    if (topic_id) {
+      query = query.eq("topic_id", topic_id);
+    }
 
     // Dodaj filtrowanie po nazwie, jeśli podano
     if (name) {

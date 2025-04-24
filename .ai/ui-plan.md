@@ -50,30 +50,24 @@ Aplikacja wykorzystuje nowoczesny stos technologiczny (Astro, TypeScript, React,
 
 ### TopicDetailView
 - **Ścieżka**: `/topics/:id`
-- **Główny cel**: Prezentacja szczegółów wybranego tematu i zawartych w nim dokumentów
-- **Kluczowe informacje**: Nazwa tematu, lista dokumentów, metadane
+- **Główny cel**: Prezentacja szczegółów wybranego tematu i pełne zarządzanie dokumentami w tym temacie
+- **Kluczowe informacje**: Nazwa tematu, lista dokumentów z pełnymi metadanymi
 - **Kluczowe komponenty**:
   - Nagłówek z nazwą tematu
-  - Przyciski akcji (edytuj, usuń)
-  - Lista dokumentów (karty)
+  - Przyciski akcji dla tematu (edytuj, usuń)
+  - Lista dokumentów (karty) zawierająca:
+    - Tytuł dokumentu
+    - Data utworzenia
+    - Liczba fiszek
+    - Status dokumentu (AI/manualne)
+    - Przyciski akcji dla dokumentów (edytuj, usuń)
   - Przycisk "Dodaj dokument"
 - **UX i dostępność**:
   - Informacje o dacie utworzenia tematu
   - Liczba dokumentów i fiszek w temacie
-  - Breadcrumbs do nawigacji
-
-### DocumentsListView
-- **Ścieżka**: `/topics/:id/documents`
-- **Główny cel**: Wyświetlanie i zarządzanie dokumentami w wybranym temacie
-- **Kluczowe informacje**: Lista dokumentów z metadanymi
-- **Kluczowe komponenty**:
-  - Lista dokumentów (karty)
-  - Informacje na kartach (tytuł, data utworzenia, liczba fiszek, status)
-  - Przyciski akcji dla dokumentów (edytuj, usuń)
-  - Przycisk "Dodaj dokument"
-- **UX i dostępność**:
   - Wizualne rozróżnienie informacji o fiszkach AI/manualnych
-  
+  - Sortowanie dokumentów (np. według daty utworzenia)
+
 ### DocumentDetailView
 - **Ścieżka**: `/documents/:id`
 - **Główny cel**: Prezentacja szczegółów dokumentu i zawartych w nim fiszek
@@ -142,6 +136,13 @@ Aplikacja wykorzystuje nowoczesny stos technologiczny (Astro, TypeScript, React,
 4. Loguje się → DashboardView (pusty stan)
 5. Jest zachęcany do utworzenia pierwszego tematu
 
+### Nawigacja do dokumentu
+1. Użytkownik przechodzi do TopicListView
+2. Otwiera jeden z utworzonych tematów w widoku TopicDetailView
+3. Otwiera jeden z dokumentów dostępny przez komponent TopicCard klikając w kartę dokumentu.
+4. Widzi nagłówek dokumentu - jego tytuł i fragment treści (pierwsze 100 wyrazów). W nagłówku jest klawisz do edycji, usunięcia i ponownej generacji fiszek AI. Jeśli dokument posiada nie zatwierdzone fiszki AI to jest link do listy fiszek do akceptacji wraz z liczbą. 
+5. poniżej widzi zatwierdzone aktywne fiszki z CRUD'em. Fiszki geenerowane przez AI mają oznaczenie "AI". Fiszki można sortować i mają paginację.
+
 ### Tworzenie fiszek przy użyciu AI
 1. Użytkownik przechodzi do TopicsListView
 2. Tworzy nowy temat poprzez modal
@@ -197,7 +198,7 @@ Aplikacja wykorzystuje nowoczesny stos technologiczny (Astro, TypeScript, React,
 ### Hierarchia nawigacji
 1. Dashboard (punkt wejścia po zalogowaniu)
 2. Tematy (TopicsListView)
-3. Szczegóły tematu (TopicDetailView)
+3. Szczegóły tematu z listą dokumentów (TopicDetailView)
 4. Szczegóły dokumentu (DocumentDetailView)
 5. Edycja dokumentu lub zatwierdzanie fiszek (DocumentEditView, FlashcardsApprovalView)
 

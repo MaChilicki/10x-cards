@@ -121,12 +121,16 @@ export interface FlashcardAiResponse {
 // ------------------------------------------------------------------------------------------------
 // Topic DTOs
 // ------------------------------------------------------------------------------------------------
-export type TopicDto = Topic;
+export interface TopicDto extends Topic {
+  documents_count: number;
+  flashcards_count: number;
+  breadcrumbs: { id: string; name: string }[];
+}
 
 export interface TopicCreateDto {
   name: string;
   description?: string;
-  parent_id?: string;
+  parent_id?: string | null;
 }
 
 export type TopicUpdateDto = Partial<{
@@ -144,6 +148,8 @@ export interface TopicsListResponseDto {
 // ------------------------------------------------------------------------------------------------
 export interface DocumentDto extends Document {
   has_flashcards?: boolean;
+  flashcards?: FlashcardDto[];
+  is_ai_generated?: boolean;
 }
 
 export interface DocumentCreateDto {
@@ -202,3 +208,42 @@ export interface StudySessionResultsListResponseDto {
 // User Statistics DTO
 // ------------------------------------------------------------------------------------------------
 export type UserStatisticsDto = UserStatistics;
+
+// ------------------------------------------------------------------------------------------------
+// View Models dla DocumentDetailView
+// ------------------------------------------------------------------------------------------------
+export interface FlashcardsSortModel {
+  sortBy: "front" | "created_at" | "updated_at" | "source";
+  sortOrder: "asc" | "desc";
+}
+
+export interface DocumentDetailViewModel {
+  document: DocumentDto | null;
+  isLoadingDocument: boolean;
+  documentError: string | null;
+  unapprovedAiFlashcardsCount: number;
+}
+
+export interface FlashcardsListViewModel {
+  flashcards: FlashcardDto[];
+  pagination: PaginationDto | null;
+  isLoadingFlashcards: boolean;
+  flashcardsError: string | null;
+  currentPage: number;
+  currentSort: FlashcardsSortModel;
+}
+
+export interface FlashcardFormViewModel {
+  front: string;
+  back: string;
+  errors: { front?: string; back?: string };
+  isSubmitting: boolean;
+}
+
+export interface ConfirmDialogState {
+  isOpen: boolean;
+  title: string;
+  description: string;
+  confirmText?: string;
+  onConfirm: (() => void) | null;
+}

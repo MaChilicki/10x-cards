@@ -26,11 +26,14 @@ export const documentsQuerySchema = z.object({
     .max(DOCUMENT_VALIDATION.MAX_PAGE_SIZE, `Maksymalny limit wyników to ${DOCUMENT_VALIDATION.MAX_PAGE_SIZE}`)
     .default(20),
   sort: z
-    .enum(["name", "-created_at", "created_at"], {
-      errorMap: () => ({ message: "Dozwolone wartości sortowania: name, -created_at, created_at" }),
+    .enum(["created_at", "name", "-created_at", "-name", "updated_at", "-updated_at"], {
+      errorMap: () => ({
+        message: "Dozwolone wartości sortowania: created_at, name, -created_at, -name, updated_at, -updated_at",
+      }),
     })
-    .default("-created_at"),
+    .default("created_at"),
   name: z.string().optional(),
+  topic_id: z.string().uuid().optional(),
 });
 
 /**

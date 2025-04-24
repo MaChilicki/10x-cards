@@ -4,9 +4,11 @@
 
 Aplikacja 10xCards to webowy system do tworzenia i zarządzania fiszkami edukacyjnymi. System umożliwia automatyczne generowanie fiszek przez LLM na podstawie wprowadzonego tekstu, a także ręczne ich tworzenie. Użytkownik ma dostęp do pełnego zestawu operacji CRUD (przeglądanie, edycja, usuwanie), a fiszki są grupowane według dokumentu źródłowego. Projekt integruje otwarty algorytm powtórek, co pozwala na efektywne zarządzanie sesjami nauki opartej na metodzie spaced repetition. System posiada również mechanizmy monitorowania statystyk oraz obsługi błędów komunikacji z API.
 
+Aplikacja oferuje hierarchiczną strukturę organizacji danych: Tematy → Dokumenty → Fiszki, gdzie każdy temat może zawierać wiele dokumentów, a każdy dokument wiele fiszek. Taka struktura pozwala na efektywne zarządzanie i kategoryzowanie materiałów edukacyjnych.
+
 ## 2. Problem użytkownika
 
-Głównym problemem, z jakim borykają się użytkownicy, jest czasochłonność ręcznego tworzenia wysokiej jakości fiszek edukacyjnych. Proces ten jest żmudny i wymaga dużego wysiłku, co zniechęca do wykorzystywania efektywnych metod nauki, takich jak spaced repetition.
+Głównym problemem, z jakim borykają się użytkownicy, jest czasochłonność ręcznego tworzenia wysokiej jakości fiszek edukacyjnych. Proces ten jest żmudny i wymaga dużego wysiłku, co zniechęca do wykorzystywania efektywnych metod nauki, takich jak spaced repetition. Dodatkowo, użytkownicy potrzebują efektywnego sposobu organizowania swoich materiałów edukacyjnych w logiczne kategorie i grupy.
 
 ## 3. Wymagania funkcjonalne
 
@@ -26,21 +28,38 @@ Głównym problemem, z jakim borykają się użytkownicy, jest czasochłonność
    - Rejestracja, logowanie, zmiana hasła (z potwierdzeniem) oraz opcja usunięcia konta.
    - Każdy użytkownik przechowuje swoje fiszki, które są prywatne i powiązane z kontem.
 
-5. Grupowanie fiszek według dokumentu źródłowego:
+5. Hierarchiczna organizacja treści:
+   - System pozwala na tworzenie i zarządzanie tematami, które grupują dokumenty.
+   - Możliwość przeglądania, tworzenia, edycji i usuwania tematów.
+   - Każdy temat może zawierać wiele dokumentów, a dokumenty mogą być przesuwane między tematami.
+   - Tematy mogą mieć strukturę hierarchiczną (tematy nadrzędne i podrzędne).
+
+6. Zarządzanie dokumentami:
+   - Możliwość tworzenia, edycji, przeglądania i usuwania dokumentów.
+   - Dokumenty zawierają tekst, który jest podstawą do generowania fiszek.
+   - Dokumenty są przypisane do tematów i służą jako źródło dla fiszek.
+   - Usunięcie dokumentu powoduje usunięcie wszystkich powiązanych z nim fiszek.
+
+7. Grupowanie fiszek według dokumentu źródłowego:
    - Fiszki są przypisywane do odpowiednich grup tematycznych na podstawie dokumentu źródłowego.
    - Rejestrowane są daty utworzenia oraz informacja, czy fiszka została wygenerowana przez AI czy stworzona/zmodyfikowana ręcznie.
 
-6. Integracja z algorytmem powtórek:
+8. Integracja z algorytmem powtórek:
    - System integruje otwarty algorytm powtórek, który automatycznie obsługuje sesje nauki zgodnie z metodą spaced repetition.
 
-7. Monitorowanie i statystyki:
+9. Monitorowanie i statystyki:
    - System zbiera statystyki dotyczące liczby fiszek generowanych przez AI, akceptacji przez użytkownika oraz udziału modyfikowanych fiszek.
 
-8. Mechanizmy ponownego generowania fiszek:
-   - Użytkownik ma możliwość ponownego wysłania tekstu do generowania fiszek. Fiszki odrzucone przez użytkownika nie wliczają się do kryteriów sukcesu.
+10. Mechanizmy ponownego generowania fiszek:
+    - Użytkownik ma możliwość ponownego wysłania tekstu do generowania fiszek. Fiszki odrzucone przez użytkownika nie wliczają się do kryteriów sukcesu.
 
-9. Obsługa błędów:
-   - System musi wyświetlać czytelne komunikaty w przypadku błędów komunikacji z API oraz umożliwiać ponowne wysłanie tekstu.
+11. Obsługa błędów:
+    - System musi wyświetlać czytelne komunikaty w przypadku błędów komunikacji z API oraz umożliwiać ponowne wysłanie tekstu.
+
+12. Zarządzanie cyklem życia fiszek:
+    - Fiszki generowane przez AI (source="ai") są usuwane poprzez soft delete (oznaczenie jako nieaktywne).
+    - Fiszki tworzone ręcznie (source="manual") są usuwane poprzez hard delete (całkowite usunięcie z bazy danych).
+    - System automatycznie zarządza powiązaniami między fiszkami, dokumentami i tematami, zachowując integralność danych.
 
 ## 4. Granice produktu
 
@@ -126,10 +145,81 @@ Głównym problemem, z jakim borykają się użytkownicy, jest czasochłonność
   1. W sytuacji awarii API użytkownik otrzymuje komunikat o błędzie.
   2. System umożliwia ponowne wysłanie tekstu do generacji fiszek.
 
+### US-011: Tworzenie i zarządzanie tematami
+- Tytuł: Tworzenie i zarządzanie hierarchią tematów
+- Opis: Użytkownik może tworzyć, przeglądać, edytować i usuwać tematy, które służą do grupowania dokumentów. Tematy mogą mieć strukturę hierarchiczną (tematy nadrzędne i podrzędne).
+- Kryteria akceptacji:
+  1. Użytkownik może utworzyć nowy temat podając jego nazwę i opcjonalny opis.
+  2. Tematy mogą być tworzone jako nadrzędne lub podrzędne względem innych tematów.
+  3. Użytkownik może przeglądać listę wszystkich swoich tematów.
+  4. Użytkownik może edytować nazwę i opis istniejącego tematu.
+  5. Użytkownik może usunąć temat, o ile nie zawiera on żadnych dokumentów ani podrzędnych tematów.
+
+### US-012: Przeglądanie tematów
+- Tytuł: Przeglądanie listy tematów i ich szczegółów
+- Opis: Użytkownik ma dostęp do listy wszystkich swoich tematów z możliwością filtrowania i sortowania. Może również przejść do szczegółów tematu, aby zobaczyć zawarte w nim dokumenty.
+- Kryteria akceptacji:
+  1. System wyświetla listę tematów z informacjami o liczbie dokumentów i dacie utworzenia.
+  2. Użytkownik może filtrować tematy według różnych kryteriów.
+  3. System wyświetla szczegóły wybranego tematu wraz z listą zawartych w nim dokumentów.
+
+### US-013: Tworzenie dokumentu
+- Tytuł: Tworzenie nowego dokumentu w temacie
+- Opis: Użytkownik może utworzyć nowy dokument w wybranym temacie, podając jego nazwę i treść. Po utworzeniu dokumentu system automatycznie inicjuje proces generowania fiszek przez AI.
+- Kryteria akceptacji:
+  1. Użytkownik może utworzyć nowy dokument w wybranym temacie.
+  2. System waliduje poprawność wprowadzonych danych (niepusta nazwa, odpowiednia długość treści).
+  3. Po utworzeniu dokumentu system automatycznie rozpoczyna generowanie fiszek.
+  4. Użytkownik jest przekierowany do widoku zatwierdzania wygenerowanych fiszek.
+
+### US-014: Edycja dokumentu
+- Tytuł: Edycja istniejącego dokumentu
+- Opis: Użytkownik może edytować nazwę i treść istniejącego dokumentu. Po edycji treści system oferuje możliwość ponownego wygenerowania fiszek, z ostrzeżeniem o konsekwencjach.
+- Kryteria akceptacji:
+  1. Użytkownik może edytować nazwę i treść dokumentu.
+  2. System waliduje poprawność wprowadzonych danych.
+  3. Po edycji treści system wyświetla monit o możliwości ponownego wygenerowania fiszek.
+  4. Jeśli użytkownik zdecyduje się na ponowne generowanie fiszek, system oznacza poprzednie fiszki jako nieaktywne i generuje nowe.
+
+### US-015: Przeglądanie dokumentów
+- Tytuł: Przeglądanie listy dokumentów i ich szczegółów
+- Opis: Użytkownik może przeglądać listę wszystkich dokumentów w temacie oraz szczegóły wybranego dokumentu, w tym powiązane z nim fiszki.
+- Kryteria akceptacji:
+  1. System wyświetla listę dokumentów w temacie z informacjami o dacie utworzenia i liczbie fiszek.
+  2. Użytkownik może filtrować i sortować dokumenty.
+  3. System wyświetla szczegóły wybranego dokumentu wraz z listą powiązanych fiszek.
+  4. Użytkownik ma dostęp do akcji zarządzania dokumentem (edycja, usunięcie) oraz fiszkkami (dodanie, edycja, usunięcie).
+
+### US-016: Usuwanie dokumentu
+- Tytuł: Usuwanie dokumentu i powiązanych fiszek
+- Opis: Użytkownik może usunąć wybrany dokument, co powoduje również usunięcie wszystkich powiązanych z nim fiszek. System wyświetla ostrzeżenie przed wykonaniem tej operacji.
+- Kryteria akceptacji:
+  1. System wyświetla monit z ostrzeżeniem przed usunięciem dokumentu i powiązanych fiszek.
+  2. Po potwierdzeniu, dokument i wszystkie powiązane fiszki są usuwane z systemu.
+  3. Użytkownik otrzymuje potwierdzenie pomyślnego usunięcia.
+
+### US-017: Grupowe zatwierdzanie fiszek
+- Tytuł: Zatwierdzanie wielu fiszek jednocześnie
+- Opis: Użytkownik może zatwierdzić wiele fiszek jednocześnie, w tym wszystkie fiszki powiązane z danym dokumentem, co znacznie przyspiesza proces akceptacji.
+- Kryteria akceptacji:
+  1. System umożliwia zaznaczenie wielu fiszek i zatwierdzenie ich jednym kliknięciem.
+  2. Istnieje opcja "Zatwierdź wszystkie" dla fiszek powiązanych z dokumentem.
+  3. System wyświetla podsumowanie liczby zatwierdzonych fiszek.
+
+### US-018: Zarządzanie zależnościami między tematami
+- Tytuł: Zachowanie integralności danych podczas zarządzania tematami
+- Opis: System zapobiega usunięciu tematów, które zawierają dokumenty lub podtematy, wymagając od użytkownika opróżnienia tematu przed jego usunięciem.
+- Kryteria akceptacji:
+  1. Próba usunięcia tematu zawierającego dokumenty lub podtematy kończy się wyświetleniem komunikatu o błędzie.
+  2. System informuje użytkownika o dokładnej liczbie dokumentów i podtematów, które blokują usunięcie.
+  3. Po opróżnieniu tematu (przeniesieniu lub usunięciu wszystkich dokumentów i podtematów) temat można usunąć.
+
 ## 6. Metryki sukcesu
 
 1. 75% fiszek generowanych przez AI musi być zaakceptowanych przez użytkowników.
 2. Co najmniej 75% wszystkich fiszek w systemie powinno pochodzić z automatycznego generowania przez AI.
 3. Precyzyjna ocena modyfikacji fiszek – zmiana poniżej 50% oznacza fiszkę pozostającą w wersji AI, powyżej 50% skutkuje uznaniem fiszki jako ręcznie modyfikowanej.
 4. Niska liczba błędów komunikacji z API oraz wysoka skuteczność ponownych prób generowania fiszek.
-5. Utrzymanie wysokiej jakości interfejsu użytkownika z pełną funkcjonalnością operacji CRUD. 
+5. Utrzymanie wysokiej jakości interfejsu użytkownika z pełną funkcjonalnością operacji CRUD.
+6. Efektywna organizacja treści poprzez strukturę tematów i dokumentów – średnio co najmniej 3 dokumenty na temat i 10 fiszek na dokument.
+7. Wysoka skuteczność nawigacji w hierarchicznej strukturze danych – średni czas potrzebny na znalezienie konkretnej fiszki nie powinien przekraczać 30 sekund. 
