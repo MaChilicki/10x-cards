@@ -97,15 +97,29 @@ Aplikacja wykorzystuje nowoczesny stos technologiczny (Astro, TypeScript, React,
 ### FlashcardsApprovalView
 - **Ścieżka**: `/documents/:id/flashcards/approve`
 - **Główny cel**: Zatwierdzanie lub odrzucanie fiszek wygenerowanych przez AI
-- **Kluczowe informacje**: Lista wygenerowanych fiszek, opcje zatwierdzenia/odrzucenia/edycji
+- **Kluczowe informacje**: Lista niezatwierdzonych fiszek AI (source='AI', is_disabled=FALSE, is_approved=FALSE), opcje pojedynczej i zbiorczej akceptacji
 - **Kluczowe komponenty**:
-  - Informacja o dokumencie źródłowym
-  - Lista wygenerowanych fiszek
-  - Przyciski akcji dla fiszek (zatwierdź, odrzuć, edytuj)
-  - Przyciski "Zatwierdź wszystkie", "Odrzuć wszystkie"
+  - DocumentHeader z informacją o dokumencie źródłowym
+  - Breadcrumbs (Tematy > Tytuł tematu > Tytuł dokumentu > Akceptacja fiszek AI)
+  - Lista fiszek do akceptacji z możliwością zaznaczania wielu naraz
+  - Checkboxy do zaznaczania pojedynczych fiszek
+  - Kontrolki dla każdej fiszki:
+    - Przycisk "Zatwierdź" (pojedyncza fiszka)
+    - Przycisk "Edytuj" (otwiera modal edycji)
+    - Przycisk odwracania fiszki (podgląd przód/tył)
+  - Akcje zbiorcze:
+    - Przycisk "Zatwierdź zaznaczone"
+    - Przycisk "Zatwierdź wszystkie"
+    - Przycisk "Zaznacz wszystkie"
+  - ConfirmationDialog dla akceptacji zbiorczej
+  - EditFlashcardModal do edycji pojedynczej fiszki
 - **UX i dostępność**:
-  - Możliwość szybkiego przeglądania przodu/tyłu fiszek
-  - Podsumowanie (liczba zatwierdzonych/odrzuconych)
+  - Możliwość szybkiego przeglądania i odwracania fiszek (przód/tył)
+  - Wyraźne oznaczenie źródła fiszek (AI)
+  - Informacja o liczbie zaznaczonych/wszystkich fiszek
+  - Fiszki po edycji nie są automatycznie akceptowane
+  - Jasne komunikaty o statusie operacji
+  - Zmiana fiszki AI na manualną skutkuje utworzeniem nowej fiszki i dezaktywacją oryginalnej (is_disabled=TRUE)
 
 ### StudySessionPlaceholderView
 - **Ścieżka**: `/study`

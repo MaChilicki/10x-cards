@@ -1,7 +1,7 @@
 import type { FlashcardDto, PaginationDto } from "@/types";
 
 export interface FlashcardsSortModel {
-  sortBy: "front" | "created_at" | "updated_at" | "source";
+  sortBy: "front_modified" | "created_at" | "updated_at";
   sortOrder: "asc" | "desc";
 }
 

@@ -82,4 +82,10 @@ declare module "react" {
   export const forwardRef: typeof React.forwardRef;
   export type ComponentPropsWithoutRef<T> = React.ComponentPropsWithoutRef<T>;
   export type ButtonHTMLAttributes<T> = React.ButtonHTMLAttributes<T>;
+
+  export type ComponentProps<T> = T extends new (...args: any[]) => any
+    ? Omit<InstanceType<T>, keyof Component<any, any>>
+    : T extends keyof JSX.IntrinsicElements
+      ? JSX.IntrinsicElements[T]
+      : never;
 }

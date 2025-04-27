@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 export interface ErrorAlertProps extends React.ComponentPropsWithoutRef<typeof Alert> {
   title?: string;
   message: string;
+  className?: string;
 }
 
 export function ErrorAlert({ className, title = "Błąd", message, ...props }: ErrorAlertProps) {

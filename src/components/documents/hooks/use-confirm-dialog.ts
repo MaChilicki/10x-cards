@@ -6,6 +6,7 @@ interface ConfirmDialogState {
   description: string;
   confirmText: string;
   onConfirm: () => Promise<void>;
+  dangerousHTML?: boolean;
 }
 
 const defaultState: ConfirmDialogState = {
@@ -14,6 +15,7 @@ const defaultState: ConfirmDialogState = {
   description: "",
   confirmText: "Potwierdź",
   onConfirm: () => Promise.resolve(),
+  dangerousHTML: false,
 };
 
 interface OpenDialogOptions {
@@ -21,18 +23,26 @@ interface OpenDialogOptions {
   description: string;
   confirmText?: string;
   onConfirm: () => Promise<void>;
+  dangerousHTML?: boolean;
 }
 
 export function useConfirmDialog() {
   const [dialogState, setDialogState] = useState<ConfirmDialogState>(defaultState);
 
-  const openDialog = ({ title, description, confirmText = "Potwierdź", onConfirm }: OpenDialogOptions) => {
+  const openDialog = ({
+    title,
+    description,
+    confirmText = "Potwierdź",
+    onConfirm,
+    dangerousHTML = false,
+  }: OpenDialogOptions) => {
     setDialogState({
       isOpen: true,
       title,
       description,
       confirmText,
       onConfirm,
+      dangerousHTML,
     });
   };
 

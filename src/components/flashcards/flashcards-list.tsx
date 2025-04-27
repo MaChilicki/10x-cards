@@ -1,95 +1,49 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, RotateCw } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import type { FlashcardDto } from "@/types";
+import { FlashcardCard } from "./flashcard-card";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
+import { useFlippedCards } from "./hooks/use-flipped-cards";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface FlashcardsListProps {
   flashcards: FlashcardDto[];
   isLoading: boolean;
+  mode?: "view" | "approve" | "learn";
+  selectedFlashcards?: Record<string, boolean>;
+  pagination?: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  };
   onEditFlashcard: (flashcardId: string, updates: Partial<FlashcardDto>) => Promise<void>;
-  onDeleteFlashcard: (flashcardId: string) => void;
+  onDeleteFlashcard: (flashcardId: string) => Promise<void>;
+  onPageChange?: (page: number) => void;
+  onToggleSelect?: (id: string) => void;
+  onApproveFlashcard?: (id: string) => Promise<void>;
 }
 
-interface FlashcardCardProps {
-  flashcard: FlashcardDto;
-  onEdit: (flashcardId: string, updates: Partial<FlashcardDto>) => Promise<void>;
-  onDelete: (flashcardId: string) => void;
-}
+export function FlashcardsList({
+  flashcards,
+  isLoading,
+  mode = "view",
+  selectedFlashcards = {},
+  pagination,
+  onEditFlashcard,
+  onDeleteFlashcard,
+  onPageChange,
+  onToggleSelect,
+  onApproveFlashcard,
+}: FlashcardsListProps) {
+  const { isCardFlipped, toggleCard } = useFlippedCards();
 
-function FlashcardCard({ flashcard, onEdit, onDelete }: FlashcardCardProps) {
-  const [isFlipped, setIsFlipped] = useState(false);
-
-  return (
-    <Card className="relative group h-[300px] perspective-1000">
-      <div
-        className={`w-full h-full transition-transform duration-500 transform-style-3d ${
-          isFlipped ? "rotate-y-180" : ""
-        }`}
-      >
-        {/* Front */}
-        <div className="absolute w-full h-full backface-hidden">
-          <CardHeader className="space-y-0">
-            <div className="absolute right-4 top-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button variant="ghost" size="icon" onClick={() => setIsFlipped(!isFlipped)}>
-                <RotateCw className="h-4 w-4" />
-                <span className="sr-only">Odwróć fiszkę</span>
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => onEdit(flashcard.id, flashcard)}>
-                <Pencil className="h-4 w-4" />
-                <span className="sr-only">Edytuj fiszkę</span>
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => onDelete(flashcard.id)}>
-                <Trash2 className="h-4 w-4" />
-                <span className="sr-only">Usuń fiszkę</span>
-              </Button>
-            </div>
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <span
-                className={`px-2 py-1 rounded text-xs ${
-                  flashcard.source === "ai" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"
-                }`}
-              >
-                {flashcard.source === "ai" ? "AI" : "Manualna"}
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="mt-4">
-              <h3 className="font-medium mb-2">Przód</h3>
-              <p className="text-sm text-muted-foreground line-clamp-6">
-                {flashcard.front_modified || flashcard.front_original}
-              </p>
-            </div>
-          </CardContent>
-        </div>
-
-        {/* Back */}
-        <div className="absolute w-full h-full backface-hidden rotate-y-180">
-          <CardHeader className="space-y-0">
-            <div className="absolute right-4 top-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button variant="ghost" size="icon" onClick={() => setIsFlipped(!isFlipped)}>
-                <RotateCw className="h-4 w-4" />
-                <span className="sr-only">Odwróć fiszkę</span>
-              </Button>
-            </div>
-            <CardTitle className="text-sm font-medium">Tył fiszki</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="mt-4">
-              <p className="text-sm text-muted-foreground line-clamp-6">
-                {flashcard.back_modified || flashcard.back_original}
-              </p>
-            </div>
-          </CardContent>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-export function FlashcardsList({ flashcards, isLoading, onEditFlashcard, onDeleteFlashcard }: FlashcardsListProps) {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -101,16 +55,114 @@ export function FlashcardsList({ flashcards, isLoading, onEditFlashcard, onDelet
   if (flashcards.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
-        <p className="text-muted-foreground">Brak fiszek do wyświetlenia</p>
+        <p className="text-muted-foreground">
+          {mode === "approve" ? "Brak fiszek do zatwierdzenia" : "Brak fiszek do wyświetlenia"}
+        </p>
       </div>
     );
   }
 
+  // Funkcja generująca tablicę numerów stron do wyświetlenia
+  const getPageNumbers = () => {
+    if (!pagination) return [];
+    const { currentPage, totalPages } = pagination;
+    const delta = 2; // Ile stron pokazać przed i po aktualnej stronie
+    const pages: number[] = [];
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (
+        i === 1 || // Pierwsza strona
+        i === totalPages || // Ostatnia strona
+        (i >= currentPage - delta && i <= currentPage + delta) // Strony wokół aktualnej
+      ) {
+        pages.push(i);
+      }
+    }
+
+    // Dodaj "..." między nieciągłymi numerami stron
+    const withEllipsis: (number | "ellipsis")[] = [];
+    pages.forEach((page, index) => {
+      if (index > 0) {
+        if (page - pages[index - 1] > 1) {
+          withEllipsis.push("ellipsis");
+        }
+      }
+      withEllipsis.push(page);
+    });
+
+    return withEllipsis;
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {flashcards.map((flashcard) => (
-        <FlashcardCard key={flashcard.id} flashcard={flashcard} onEdit={onEditFlashcard} onDelete={onDeleteFlashcard} />
-      ))}
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {flashcards.map((flashcard) => (
+          <FlashcardCard
+            key={flashcard.id}
+            flashcard={flashcard}
+            onEdit={(updates) => onEditFlashcard(flashcard.id, updates)}
+            onDelete={() => onDeleteFlashcard(flashcard.id)}
+            isFlipped={isCardFlipped(flashcard.id)}
+            onFlip={() => toggleCard(flashcard.id)}
+            mode={mode}
+            isSelected={mode === "approve" ? selectedFlashcards[flashcard.id] : undefined}
+            onToggleSelect={mode === "approve" && onToggleSelect ? () => onToggleSelect(flashcard.id) : undefined}
+            onApprove={mode === "approve" && onApproveFlashcard ? () => onApproveFlashcard(flashcard.id) : undefined}
+          />
+        ))}
+      </div>
+
+      {pagination && pagination.totalPages > 1 && (
+        <Pagination className="mt-8">
+          <PaginationContent>
+            <PaginationItem>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={pagination.currentPage === 1}
+                onClick={() => onPageChange?.(pagination.currentPage - 1)}
+                className="gap-2"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span>Poprzednia</span>
+              </Button>
+            </PaginationItem>
+
+            {getPageNumbers().map((pageNumber, index) =>
+              pageNumber === "ellipsis" ? (
+                <PaginationItem key={`ellipsis-${index}`}>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              ) : (
+                <PaginationItem key={pageNumber}>
+                  <PaginationLink
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onPageChange?.(pageNumber);
+                    }}
+                    isActive={pagination.currentPage === pageNumber}
+                  >
+                    {pageNumber}
+                  </PaginationLink>
+                </PaginationItem>
+              )
+            )}
+
+            <PaginationItem>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={pagination.currentPage === pagination.totalPages}
+                onClick={() => onPageChange?.(pagination.currentPage + 1)}
+                className="gap-2"
+              >
+                <span>Następna</span>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
     </div>
   );
 }

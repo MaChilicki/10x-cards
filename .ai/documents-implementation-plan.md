@@ -97,7 +97,9 @@ Zostaną utworzone dedykowane schematy `zod` do walidacji:
           "content": "string", // Uwaga: Rozważyć nie zwracanie pełnej treści w liście dla wydajności
           "created_at": "ISODate string",
           "updated_at": "ISODate string",
-          "has_flashcards": "boolean | undefined" // Dodane przez DocumentDto
+          "ai_flashcards_count": "number", // Liczba zatwierdzonych fiszek AI
+          "manual_flashcards_count": "number", // Liczba ręcznie dodanych fiszek
+          "total_flashcards_count": "number" // Suma wszystkich fiszek
         }
       ],
       "total": number // Całkowita liczba dokumentów pasujących do filtrów
@@ -116,7 +118,9 @@ Zostaną utworzone dedykowane schematy `zod` do walidacji:
       "content": "string",
       "created_at": "ISODate string",
       "updated_at": "ISODate string",
-      "has_flashcards": "boolean | undefined"
+      "ai_flashcards_count": 0,
+      "manual_flashcards_count": 0,
+      "total_flashcards_count": 0
     }
     ```
 
@@ -153,13 +157,18 @@ Zostaną utworzone dedykowane schematy `zod` do walidacji:
     *   Otrzymuje żądanie od kontrolera API.
     *   Korzysta z przekazanego klienta Supabase (`SupabaseClient` z `context.locals`) do interakcji z bazą danych. Klient ten ma wbudowany kontekst RLS (Row Level Security) dla uwierzytelnionego użytkownika.
     *   **Logika biznesowa:**
-        *   `GET /api/documents`: Buduje zapytanie do Supabase z uwzględnieniem filtrowania (`name`), sortowania (`sort`) i paginacji (`page`, `limit`). Zwraca listę dokumentów i całkowitą ich liczbę.
-        *   `POST /api/documents`: Wstawia nowy rekord do tabeli `documents`, używając `user_id` z kontekstu. Po pomyślnym zapisie, inicjuje **asynchroniczne** zadanie generowania fiszek (np. przez wysłanie wiadomości do kolejki lub wywołanie innej funkcji serverless), przekazując `document_id` i `content`.
-        *   `GET /api/documents/{id}`: Pobiera dokument o podanym `id` i `user_id` z kontekstu.
-        *   `PUT /api/documents/{id}`: Aktualizuje dokument o podanym `id` i `user_id` z kontekstu.
+        *   `GET /api/documents`: 
+            * Buduje zapytanie do Supabase z uwzględnieniem filtrowania (`name`), sortowania (`sort`) i paginacji (`page`, `limit`). 
+            * Po pobraniu dokumentów, wykonuje dwa dodatkowe zapytania pobierające wszystkie fiszki AI i manual dla tych dokumentów.
+            * Zlicza fiszki po stronie aplikacji dla każdego dokumentu i tworzy mapy z liczbami.
+            * Łączy dane dokumentów z policzonymi statystykami i zwraca kompletną odpowiedź.
+            * W przypadku błędu podczas pobierania statystyk, zwraca dokumenty bez statystyk.
+        *   `POST /api/documents`: Wstawia nowy rekord do tabeli `documents`, używając `user_id` z kontekstu. Po pomyślnym zapisie, inicjuje **asynchroniczne** zadanie generowania fiszek, przekazując `document_id` i `content`.
+        *   `GET /api/documents/{id}`: Pobiera dokument o podanym `id` i wykonuje dwa zapytania pobierające wszystkie fiszki AI i manual dla tego dokumentu. W odpowiedzi zwraca dokument wzbogacony o statystyki fiszek.
+        *   `PUT /api/documents/{id}`: Aktualizuje dokument o podanym `id`. Po aktualizacji pobiera aktualne statystyki fiszek przez wywołanie `getDocumentById`.
         *   `DELETE /api/documents/{id}`:
-            1.  Wykonuje zapytanie do Supabase, aby usunąć wszystkie fiszki powiązane z danym `document_id` i `user_id` (np. `supabase.from('flashcards').delete().match({ document_id: id, user_id: userId })`).
-            2.  Wykonuje zapytanie do Supabase, aby usunąć dokument o podanym `id` i `user_id`.
+            1.  Wykonuje zapytanie do Supabase, aby usunąć wszystkie fiszki powiązane z danym `document_id`.
+            2.  Wykonuje zapytanie do Supabase, aby usunąć dokument o podanym `id`.
     *   Zwraca wynik operacji (dane lub potwierdzenie) do API Route Handler.
 5.  **Odpowiedź HTTP:** API Route Handler formatuje odpowiedź (sukces lub błąd) i wysyła ją do klienta.
 
@@ -197,6 +206,7 @@ Zostaną utworzone dedykowane schematy `zod` do walidacji:
     *   Implementacja metod serwisu (`listDocuments`, `createDocument`, `getDocumentById`, `updateDocument`, `deleteDocument`) wykorzystujących `SupabaseClient` przekazany z kontekstu.
     *   Dodanie logiki usuwania powiązanych fiszek w `deleteDocument`.
     *   Dodanie logiki inicjowania zadania asynchronicznego generowania fiszek w `createDocument`.
+    *   Implementacja pobierania statystyk fiszek (liczba AI i manual) dla każdego dokumentu.
 3.  **Implementacja API Routes (Kontrolery):**
     *   Utworzenie/modyfikacja pliku `src/pages/api/documents/index.ts` dla obsługi `GET` i `POST`.
     *   Utworzenie/modyfikacja pliku `src/pages/api/documents/[id].ts` dla obsługi `GET`, `PUT` i `DELETE` dla konkretnego ID.
@@ -215,4 +225,4 @@ Zostaną utworzone dedykowane schematy `zod` do walidacji:
 7.  **Dokumentacja:**
     *   Aktualizacja dokumentacji API (np. w Swagger/OpenAPI, jeśli jest używana, lub w plikach `.md`).
 8.  **Wdrożenie:**
-    *   Wdrożenie zmian na środowisko stagingowe, a następnie produkcyjne, zgodnie z procesem CI/CD. 
+    *   Wdrożenie zmian na środowisko stagingowe, a następnie produkcyjne, zgodnie z procesem CI/CD.

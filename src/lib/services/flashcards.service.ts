@@ -9,6 +9,7 @@ import type {
   FlashcardSource,
   Flashcard,
   FlashcardInsert,
+  SpacedRepetitionData,
 } from "../../types";
 import type { FlashcardsQueryParams } from "../schemas/flashcards.schema";
 import { logger } from "./logger.service";
@@ -19,6 +20,42 @@ export class FlashcardsService {
 
   constructor(private readonly supabase: SupabaseClient) {
     this.modificationService = new FlashcardModificationService();
+  }
+
+  /**
+   * Konwertuje dane JSON na SpacedRepetitionData
+   */
+  private parseSpacedRepetitionData(data: unknown): SpacedRepetitionData | undefined {
+    if (!data || typeof data !== "object") return undefined;
+
+    try {
+      const parsed = data as Partial<SpacedRepetitionData>;
+
+      // Sprawdzamy czy obiekt ma wszystkie wymagane pola i poprawne typy
+      if (
+        typeof parsed.repetitions === "number" &&
+        typeof parsed.easiness_factor === "number" &&
+        typeof parsed.interval === "number" &&
+        typeof parsed.next_review_date === "string" &&
+        typeof parsed.last_review_date === "string" &&
+        Array.isArray(parsed.review_history) &&
+        parsed.review_history.every(
+          (item) =>
+            typeof item === "object" &&
+            item !== null &&
+            typeof item.date === "string" &&
+            typeof item.grade === "number" &&
+            typeof item.interval === "number"
+        )
+      ) {
+        return parsed as SpacedRepetitionData;
+      }
+
+      return undefined;
+    } catch (error) {
+      logger.warn(`Błąd podczas parsowania spaced_repetition_data: ${error}`);
+      return undefined;
+    }
   }
 
   /**
@@ -50,7 +87,21 @@ export class FlashcardsService {
    */
   async getFlashcards(params: FlashcardsQueryParams): Promise<FlashcardsListResponseDto> {
     try {
-      const { page = 1, limit = 10, sort, document_id, topic_id, source, is_approved } = params;
+      const {
+        page = 1,
+        limit = 10,
+        sort,
+        document_id,
+        topic_id,
+        source,
+        is_approved,
+        is_modified,
+        is_disabled = false,
+      } = params;
+
+      logger.debug(
+        `Parametry zapytania: ${JSON.stringify({ page, limit, sort, document_id, topic_id, source, is_approved, is_modified, is_disabled })}`
+      );
 
       // Budowanie zapytania bazowego
       let query = this.supabase.from("flashcards").select("*", { count: "exact" });
@@ -65,16 +116,32 @@ export class FlashcardsService {
       if (source) {
         query = query.eq("source", source);
       }
-      if (typeof is_approved === "boolean") {
+      if (is_approved !== undefined) {
+        logger.debug(`Filtrowanie po is_approved: ${is_approved}, typ: ${typeof is_approved}`);
         query = query.eq("is_approved", is_approved);
       }
+      if (is_modified !== undefined) {
+        logger.debug(`Filtrowanie po is_modified: ${is_modified}, typ: ${typeof is_modified}`);
+        query = query.eq("is_modified", is_modified);
+      }
 
-      // Domyślnie pokazujemy tylko aktywne fiszki
-      query = query.eq("is_disabled", false);
+      // Zawsze filtrujemy po is_disabled
+      logger.debug(`Filtrowanie po is_disabled: ${is_disabled}, typ: ${typeof is_disabled}`);
+      query = query.eq("is_disabled", is_disabled);
 
       // Sortowanie
       if (sort) {
-        query = query.order(sort);
+        const isDesc = sort.startsWith("-");
+        const fieldName = isDesc ? sort.substring(1) : sort;
+
+        // Specjalna obsługa sortowania po front_modified
+        if (fieldName === "front_modified") {
+          query = query
+            .order("front_modified", { ascending: !isDesc, nullsFirst: false })
+            .order("front_original", { ascending: !isDesc });
+        } else {
+          query = query.order(fieldName, { ascending: !isDesc });
+        }
       } else {
         query = query.order("created_at", { ascending: false });
       }
@@ -206,6 +273,7 @@ export class FlashcardsService {
           is_modified: false,
           is_disabled: false,
           user_id: DEFAULT_USER_ID, // Tymczasowo, zostanie zastąpione przez Supabase Auth
+          created_at: originalFlashcard.created_at, // Kopiujemy datę utworzenia z oryginalnej fiszki
         };
 
         const { data: newData, error: insertError } = await this.supabase
@@ -219,7 +287,7 @@ export class FlashcardsService {
         }
 
         return {
-          flashcard: this.mapToFlashcardDtos([originalFlashcard])[0],
+          flashcard: originalFlashcard,
           newFlashcard: this.mapToFlashcardDtos([newData])[0],
         };
       } else {
@@ -287,19 +355,20 @@ export class FlashcardsService {
       id: flashcard.id,
       front_original: flashcard.front_original,
       back_original: flashcard.back_original,
-      front_modified: flashcard.front_modified,
-      back_modified: flashcard.back_modified,
-      topic_id: flashcard.topic_id,
-      document_id: flashcard.document_id,
+      front_modified: flashcard.front_modified || flashcard.front_original,
+      back_modified: flashcard.back_modified || flashcard.back_original,
+      topic_id: flashcard.topic_id || undefined,
+      document_id: flashcard.document_id || undefined,
       created_at: flashcard.created_at,
       updated_at: flashcard.updated_at,
       user_id: flashcard.user_id,
-      modification_percentage: flashcard.modification_percentage,
-      source: flashcard.source,
+      modification_percentage: flashcard.modification_percentage || undefined,
+      source: flashcard.source as FlashcardSource,
       is_approved: flashcard.is_approved,
       is_modified: flashcard.is_modified,
       is_disabled: flashcard.is_disabled,
-      spaced_repetition_data: flashcard.spaced_repetition_data,
+      spaced_repetition_data: this.parseSpacedRepetitionData(flashcard.spaced_repetition_data),
+      status: flashcard.is_approved ? "approved" : "pending", // Mapujemy status na podstawie is_approved
     }));
   }
 

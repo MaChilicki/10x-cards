@@ -27,27 +27,54 @@ export type UserStatistics = Database["public"]["Tables"]["user_statistics"]["Ro
 export type FlashcardSource = "ai" | "manual";
 
 // ------------------------------------------------------------------------------------------------
+// Spaced Repetition Data
+// ------------------------------------------------------------------------------------------------
+export interface SpacedRepetitionData {
+  // Liczba powtórek
+  repetitions: number;
+  // Łatwość zapamiętywania (czynnik E w algorytmie SuperMemo)
+  easiness_factor: number;
+  // Interwał w dniach do następnej powtórki
+  interval: number;
+  // Data następnej powtórki
+  next_review_date: string;
+  // Data ostatniej powtórki
+  last_review_date: string;
+  // Historia odpowiedzi (0-5, gdzie 5 to najłatwiejsze)
+  review_history: {
+    date: string;
+    grade: number;
+    interval: number;
+  }[];
+}
+
+// ------------------------------------------------------------------------------------------------
 // Flashcard DTOs
 // ------------------------------------------------------------------------------------------------
-export type FlashcardDto = Pick<
-  Flashcard,
-  | "id"
-  | "front_original"
-  | "back_original"
-  | "front_modified"
-  | "back_modified"
-  | "topic_id"
-  | "document_id"
-  | "created_at"
-  | "updated_at"
-  | "user_id"
-  | "modification_percentage"
-  | "source"
-  | "is_approved"
-  | "is_modified"
-  | "is_disabled"
-  | "spaced_repetition_data"
->;
+export interface FlashcardDto {
+  id: string;
+  front_original: string;
+  back_original: string;
+  front_modified?: string;
+  back_modified?: string;
+  created_at: string;
+  updated_at: string;
+  topic_id?: string;
+  document_id?: string;
+  source: FlashcardSource;
+  status: "pending" | "approved" | "rejected";
+  is_modified?: boolean;
+  modification_percentage?: number;
+  user_id: string;
+  is_approved: boolean;
+  is_disabled: boolean;
+  spaced_repetition_data?: SpacedRepetitionData;
+}
+
+export interface AiRegenerateResponseDto {
+  flashcards: FlashcardProposalDto[];
+  deleted_count: number;
+}
 
 // ------------------------------------------------------------------------------------------------
 // Pagination DTO
@@ -64,6 +91,10 @@ export interface PaginationDto {
 export interface FlashcardsListResponseDto {
   data: FlashcardDto[];
   pagination: PaginationDto;
+  error?: {
+    message: string;
+    code?: string;
+  };
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -72,10 +103,14 @@ export interface FlashcardsListResponseDto {
 export interface FlashcardCreateDto {
   front_original: string;
   back_original: string;
+  front_modified?: string;
+  back_modified?: string;
   topic_id?: string;
   document_id?: string;
   source: FlashcardSource;
   is_approved: boolean;
+  is_modified?: boolean;
+  modification_percentage?: number;
 }
 
 export interface FlashcardsCreateCommand {
@@ -88,6 +123,10 @@ export interface FlashcardsCreateCommand {
 export type FlashcardUpdateDto = Partial<{
   front_modified: string;
   back_modified: string;
+  is_modified: boolean;
+  modification_percentage: number;
+  is_approved: boolean;
+  is_disabled: boolean;
 }>;
 
 // ------------------------------------------------------------------------------------------------
@@ -95,7 +134,7 @@ export type FlashcardUpdateDto = Partial<{
 // ------------------------------------------------------------------------------------------------
 export interface FlashcardAiGenerateDto {
   text: string;
-  topic_id: string;
+  topic_id?: string;
   document_id?: string;
 }
 
@@ -103,8 +142,14 @@ export interface FlashcardAiGenerateDto {
 // Flashcard AI proposal (not yet saved)
 // ------------------------------------------------------------------------------------------------
 export interface FlashcardProposalDto {
+  // Przód fiszki - maksymalnie 200 znaków
   front_original: string;
+  // Tył fiszki - maksymalnie 500 znaków
   back_original: string;
+  // Początkowa wartość równa front_original
+  front_modified?: string;
+  // Początkowa wartość równa back_original
+  back_modified?: string;
   topic_id?: string;
   document_id?: string;
   source: "ai";
@@ -146,10 +191,25 @@ export interface TopicsListResponseDto {
 // ------------------------------------------------------------------------------------------------
 // Document DTOs
 // ------------------------------------------------------------------------------------------------
-export interface DocumentDto extends Document {
+export interface DocumentDto {
+  id: string;
+  user_id: string;
+  topic_id: string | null;
+  name: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  // Statystyki fiszek
+  ai_flashcards_count?: number;
+  manual_flashcards_count?: number;
+  total_flashcards_count?: number;
+  pending_flashcards_count?: number;
+  // Istniejące pola
   has_flashcards?: boolean;
   flashcards?: FlashcardDto[];
   is_ai_generated?: boolean;
+  // Dodatkowe informacje o temacie
+  topic_title?: string;
 }
 
 export interface DocumentCreateDto {
@@ -212,32 +272,40 @@ export type UserStatisticsDto = UserStatistics;
 // ------------------------------------------------------------------------------------------------
 // View Models dla DocumentDetailView
 // ------------------------------------------------------------------------------------------------
-export interface FlashcardsSortModel {
-  sortBy: "front" | "created_at" | "updated_at" | "source";
-  sortOrder: "asc" | "desc";
-}
-
 export interface DocumentDetailViewModel {
   document: DocumentDto | null;
   isLoadingDocument: boolean;
-  documentError: string | null;
+  documentError: Error | null;
   unapprovedAiFlashcardsCount: number;
 }
 
 export interface FlashcardsListViewModel {
   flashcards: FlashcardDto[];
-  pagination: PaginationDto | null;
-  isLoadingFlashcards: boolean;
-  flashcardsError: string | null;
-  currentPage: number;
-  currentSort: FlashcardsSortModel;
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  } | null;
+  isLoading: boolean;
+  error: Error | null;
+  currentSort: import("./components/flashcards/types").FlashcardsSortModel;
 }
 
 export interface FlashcardFormViewModel {
-  front: string;
-  back: string;
-  errors: { front?: string; back?: string };
+  front_original: string;
+  back_original: string;
+  front_modified?: string;
+  back_modified?: string;
+  errors: {
+    front_original?: string;
+    back_original?: string;
+    front_modified?: string;
+    back_modified?: string;
+  };
   isSubmitting: boolean;
+  isModified: boolean;
+  modificationPercentage: number;
 }
 
 export interface ConfirmDialogState {

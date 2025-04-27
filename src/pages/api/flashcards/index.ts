@@ -11,9 +11,13 @@ export const GET: APIRoute = async ({ request }) => {
     // Pobranie i walidacja parametrów zapytania
     const url = new URL(request.url);
     const queryParams = Object.fromEntries(url.searchParams.entries());
+
+    logger.debug(`Otrzymane parametry zapytania: ${JSON.stringify(queryParams)}`);
+
     const validationResult = flashcardsQuerySchema.safeParse(queryParams);
 
     if (!validationResult.success) {
+      logger.error(`Błąd walidacji parametrów: ${JSON.stringify(validationResult.error.format())}`);
       return new Response(
         JSON.stringify({
           error: {
@@ -30,6 +34,8 @@ export const GET: APIRoute = async ({ request }) => {
         }
       );
     }
+
+    logger.debug(`Zwalidowane parametry: ${JSON.stringify(validationResult.data)}`);
 
     // Utworzenie serwisu i pobranie danych
     const flashcardsService = new FlashcardsService(supabaseClient);

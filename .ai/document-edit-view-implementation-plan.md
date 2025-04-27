@@ -1,7 +1,9 @@
 # Plan implementacji widoku DocumentEditView
 
 ## 1. Przegląd
-DocumentEditView to widok umożliwiający tworzenie nowego dokumentu lub edycję istniejącego. Użytkownik może wprowadzić tytuł i treść dokumentu, zapisać zmiany oraz wygenerować fiszki na podstawie wprowadzonego tekstu. Widok obsługuje walidację danych, ostrzega przed utratą niezapisanych zmian oraz informuje o konsekwencjach ponownego generowania fiszek.
+DocumentEditView to widok umożliwiający tworzenie nowego dokumentu lub edycję istniejącego. Użytkownik może wprowadzić tytuł i treść dokumentu i zapisać zmiany. Widok obsługuje walidację danych, ostrzega przed utratą niezapisanych zmian oraz informuje o konsekwencjach ponownego generowania fiszek. Po zapisaniu nowego dokumentu następuje automatyczne generowanie fiszek AI i przekierowanie do widoku FlashcardsApprovalView. W przypadku edycji istniejącego dokumentu system pyta użytkownika, czy chce wygenerować nowe fiszki, z odpowiednim ostrzeżeniem o usunięciu istniejących fiszek AI.
+
+> **UWAGA: Funkcjonalność regenerowania fiszek powinna być na razie zamarkowana (oznaczona jako niedostępna), ponieważ endpoint do regeneracji fiszek nie jest jeszcze gotowy.**
 
 ## 2. Routing widoku
 - `/documents/:id/edit` - edycja istniejącego dokumentu
@@ -18,17 +20,25 @@ DocumentEditView
 │   └── ValidationMessage
 ├── SubmitButtonGroup
 ├── NavigationPrompt (warunkowy)
-└── RegenerationWarningDialog (warunkowy)
+├── RegenerationWarningDialog (warunkowy)
+└── FlashcardsRegenerationDialog (warunkowy)
 ```
 
 ## 4. Szczegóły komponentów
 ### DocumentEditView
-- Opis komponentu: Główny kontener widoku, zarządza stanem dokumentu, pobiera dane istniejącego dokumentu lub inicjalizuje nowy, obsługuje zapisywanie i generowanie fiszek
-- Główne elementy: Breadcrumbs, DocumentEditForm, komponenty modalne (NavigationPrompt, RegenerationWarningDialog)
+- Opis komponentu: Główny kontener widoku, zarządza stanem dokumentu, pobiera dane istniejącego dokumentu lub inicjalizuje nowy, obsługuje zapisywanie i generowanie fiszek, a następnie widok ich akceptacji.
+- Główne elementy: Breadcrumbs, DocumentEditForm, komponenty modalne (NavigationPrompt, RegenerationWarningDialog, FlashcardsRegenerationDialog)
 - Obsługiwane interakcje: Inicjalizacja formularza, przekazanie callbacków do formularza
 - Obsługiwana walidacja: brak (delegowana do DocumentEditForm)
 - Typy: DocumentViewModel, FormContextType
-- Propsy: brak (komponent najwyższego poziomu)
+- Propsy: 
+  ```typescript
+  {
+    documentId?: string; // ID dokumentu przy edycji
+    topicId?: string;    // ID tematu przy tworzeniu nowego dokumentu
+    referrer?: "document_detail"; // Informacja o źródle wywołania
+  }
+  ```
 
 ### DocumentEditForm
 - Opis komponentu: Formularz zawierający pola do wprowadzania tytułu i treści dokumentu
@@ -48,6 +58,7 @@ DocumentEditView
     isSaving: boolean;
     isGenerating: boolean;
     errors: Record<string, string>;
+    referrer?: string;
   }
   ```
 
@@ -145,7 +156,7 @@ DocumentEditView
   ```
 
 ### RegenerationWarningDialog
-- Opis komponentu: Dialog wyświetlany przy próbie ponownego generowania fiszek
+- Opis komponentu: Dialog wyświetlany przy próbie ponownego generowania fiszek przez przycisk "Generuj fiszki"
 - Główne elementy: Dialog (z shadcn/ui)
 - Obsługiwane interakcje: onConfirm, onCancel
 - Obsługiwana walidacja: brak
@@ -159,6 +170,36 @@ DocumentEditView
   }
   ```
 
+### FlashcardsRegenerationDialog
+- Opis komponentu: Dialog wyświetlany po zapisie edytowanego dokumentu, pytający o generowanie nowych fiszek
+- Główne elementy: Dialog (z shadcn/ui), tekst ostrzeżenia o usunięciu istniejących fiszek AI (jeśli dokument ma fiszki AI)
+- Obsługiwane interakcje: onConfirm, onCancel
+- Obsługiwana walidacja: brak
+- Typy: funkcje callback
+- Propsy: 
+  ```typescript
+  {
+    isOpen: boolean;
+    hasExistingAIFlashcards: boolean;
+    aiFlashcardsCount: number;
+    onConfirm: () => void;
+    onCancel: () => void;
+  }
+  ```
+
+### Breadcrumbs
+- Opis komponentu: Wyświetla ścieżkę nawigacji do bieżącego widoku
+- Główne elementy: Lista linków
+- Obsługiwane interakcje: Kliknięcie w element nawigacji
+- Obsługiwana walidacja: brak
+- Typy: BreadcrumbItem[]
+- Propsy: 
+  ```typescript
+  {
+    items: BreadcrumbItem[];
+  }
+  ```
+
 ## 5. Typy
 ```typescript
 // ViewModel dla dokumentu
@@ -167,10 +208,13 @@ interface DocumentViewModel {
   name: string;
   content: string;
   topic_id?: string;
+  topic_title?: string;
   isNew: boolean;
   isSaving: boolean;
   isGenerating: boolean;
   errors: Record<string, string>;
+  initialContent?: string; // Wartość początkowa treści (do wykrywania zmian)
+  ai_flashcards_count?: number; // Liczba fiszek AI w dokumencie
 }
 
 // Wartości formularza
@@ -188,6 +232,7 @@ interface DocumentFormProps {
   isSaving: boolean;
   isGenerating: boolean;
   errors: Record<string, string>;
+  referrer?: string;
 }
 
 // Kontekst formularza
@@ -199,6 +244,14 @@ interface FormContextType {
   ) => void;
   handleSubmit: (e: React.FormEvent) => void;
   isDirty: boolean;
+  hasContentChanged: () => boolean;
+}
+
+// Element nawigacji
+interface BreadcrumbItem {
+  id: string;
+  name: string;
+  href: string;
 }
 ```
 
@@ -212,8 +265,12 @@ const useDocumentForm = (initialValues: FormValues, onSubmit: (values: FormValue
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isDirty, setIsDirty] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [initialContent, setInitialContent] = useState(initialValues.content);
 
   // Metody zarządzania formularzem (handleChange, validate, handleSubmit, reset)
+  
+  // Funkcja sprawdzająca, czy treść dokumentu została zmieniona
+  const hasContentChanged = () => values.content !== initialContent;
   
   return {
     values,
@@ -223,7 +280,8 @@ const useDocumentForm = (initialValues: FormValues, onSubmit: (values: FormValue
     handleChange,
     handleSubmit,
     validate,
-    reset
+    reset,
+    hasContentChanged
   };
 };
 ```
@@ -263,6 +321,42 @@ const useGenerateFlashcards = (documentId?: string, content?: string) => {
 };
 ```
 
+### useFlashcardsRegenerationDialog
+```typescript
+const useFlashcardsRegenerationDialog = (document?: DocumentDto | null) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  
+  const hasExistingAIFlashcards = !!document?.ai_flashcards_count && document.ai_flashcards_count > 0;
+  
+  const openDialog = (onConfirm: () => void) => {
+    setIsOpen(true);
+    setPendingAction(() => onConfirm);
+  };
+  
+  const closeDialog = () => {
+    setIsOpen(false);
+    setPendingAction(null);
+  };
+  
+  const confirmDialog = () => {
+    if (pendingAction) {
+      pendingAction();
+    }
+    closeDialog();
+  };
+  
+  return {
+    isOpen,
+    hasExistingAIFlashcards,
+    aiFlashcardsCount: document?.ai_flashcards_count || 0,
+    openDialog,
+    closeDialog,
+    confirmDialog
+  };
+};
+```
+
 ### useNavigationPrompt
 ```typescript
 const useNavigationPrompt = (isDirty: boolean) => {
@@ -281,7 +375,7 @@ const useNavigationPrompt = (isDirty: boolean) => {
 ```
 
 ## 7. Integracja API
-DocumentEditView korzysta z dwóch głównych endpointów API:
+DocumentEditView korzysta z kilku endpointów API:
 
 ### 1. Zarządzanie dokumentem
 - **Pobieranie dokumentu (edycja)**
@@ -295,17 +389,28 @@ DocumentEditView korzysta z dwóch głównych endpointów API:
     - Endpoint: `POST /api/documents`
     - Żądanie: `DocumentCreateDto`
     - Odpowiedź: `DocumentDto`
+    - Wywołanie: po kliknięciu przycisku "Zapisz zmiany" lub przed generowaniem fiszek
+    - Zachowanie: endpoint automatycznie generuje fiszki AI
+    - Po zapisaniu: przekierowanie do `/documents/{id}/flashcards/approve`
   - Aktualizacja:
     - Endpoint: `PUT /api/documents/{id}`
     - Żądanie: `DocumentUpdateDto`
     - Odpowiedź: `DocumentDto`
-  - Wywołanie: po kliknięciu przycisku "Zapisz zmiany" lub przed generowaniem fiszek
+    - Wywołanie: po kliknięciu przycisku "Zapisz zmiany"
+    - Po zapisaniu: 
+      - Jeśli użytkownik wybierze generowanie fiszek: przekierowanie do `/documents/{id}/flashcards/approve`
+      - Jeśli użytkownik nie wybierze generowania fiszek: przekierowanie do `/documents/{id}`
 
 ### 2. Generowanie fiszek
 - Endpoint: `POST /api/flashcards/ai-generate`
 - Żądanie: `FlashcardAiGenerateDto`
 - Odpowiedź: `FlashcardAiResponse`
-- Wywołanie: po kliknięciu przycisku "Generuj fiszki" i potwierdzeniu (jeśli wymagane)
+- Wywołanie: 
+  - Po kliknięciu przycisku "Generuj fiszki" i potwierdzeniu
+  - Po zapisie edycji dokumentu i wyborze generowania fiszek
+- Zachowanie: endpoint usuwa wszystkie istniejące fiszki AI (zatwierdzone, niezatwierdzone i soft-deleted) poprzez hard-delete
+
+> **UWAGA: Endpoint do regeneracji fiszek nie jest jeszcze gotowy. W pierwszej wersji implementacji funkcjonalność regenerowania fiszek powinna być oznaczona jako niedostępna.**
 
 ## 8. Interakcje użytkownika
 1. **Wprowadzanie tytułu i treści dokumentu**
@@ -317,19 +422,28 @@ DocumentEditView korzysta z dwóch głównych endpointów API:
    - Kliknięcie przycisku "Zapisz zmiany"
    - Walidacja formularza
    - Wysłanie danych do API
-   - Przekierowanie do widoku szczegółów dokumentu po sukcesie
+   - Różne zachowanie zależnie od typu operacji:
+     - Dla nowego dokumentu: automatyczne generowanie fiszek i przekierowanie do `/documents/{id}/flashcards/approve`
+     - Dla edycji dokumentu: wyświetlenie dialogu z pytaniem o generowanie nowych fiszek
+       - Jeśli dokument ma już fiszki AI: dodanie ostrzeżenia o usunięciu istniejących fiszek
+       - Jeśli użytkownik potwierdzi: regeneracja fiszek i przekierowanie do `/documents/{id}/flashcards/approve`
+       - Jeśli użytkownik odmówi: przekierowanie do `/documents/{id}`
 
 3. **Anulowanie edycji**
    - Kliknięcie przycisku "Anuluj"
    - Wyświetlenie NavigationPrompt jeśli są niezapisane zmiany
-   - Przekierowanie do poprzedniego widoku
+   - Przekierowanie:
+     - Dla istniejącego dokumentu (edycja): powrót do widoku szczegółów dokumentu (`/documents/{id}`)
+     - Dla nowego dokumentu (dodawanie): powrót do widoku listy dokumentów w temacie (`/topics/{topic_id}`)
 
 4. **Generowanie fiszek**
    - Kliknięcie przycisku "Generuj fiszki"
-   - Dla istniejącego dokumentu z fiszkami: wyświetlenie RegenerationWarningDialog
+   - Jeśli dokument ma już fiszki AI: wyświetlenie RegenerationWarningDialog z ostrzeżeniem o usunięciu istniejących fiszek
    - Zapisanie dokumentu (jeśli nowy lub ma niezapisane zmiany)
-   - Wywołanie API generowania fiszek
-   - Przekierowanie do FlashcardsApprovalView po sukcesie
+   - Wywołanie API generowania fiszek, które usuwa wszystkie istniejące fiszki AI
+   - Przekierowanie do `/documents/{id}/flashcards/approve`
+
+> **UWAGA: Funkcjonalność regenerowania fiszek powinna być na razie zamarkowana jako niedostępna (np. przycisk wyszarzony lub ukryty), ponieważ endpoint nie jest jeszcze gotowy.**
 
 5. **Nawigacja z niezapisanymi zmianami**
    - Wyświetlenie NavigationPrompt
@@ -374,30 +488,71 @@ DocumentEditView korzysta z dwóch głównych endpointów API:
    - Sytuacja: inne nieoczekiwane błędy
    - Obsługa: wyświetlenie ogólnego komunikatu o błędzie, możliwość zgłoszenia problemu
 
-## 11. Kroki implementacji
+## 11. Integracja z DocumentDetailView
+1. **Breadcrumbs**
+   - Przy wywołaniu z DocumentDetailView:
+     ```typescript
+     [
+       { id: "topics", name: "Tematy", href: "/topics" },
+       { id: document.topic_id, name: document.topic_title, href: `/topics/${document.topic_id}` },
+       { id: document.id, name: document.name, href: `/documents/${document.id}` },
+       { id: "edit", name: "Edycja", href: "#" }
+     ]
+     ```
+   - Przy standardowym wywołaniu:
+     ```typescript
+     [
+       { id: "topics", name: "Tematy", href: "/topics" },
+       { id: document.topic_id, name: document.topic_title, href: `/topics/${document.topic_id}` },
+       { id: isNew ? "new" : "edit", name: isNew ? "Nowy dokument" : "Edycja", href: "#" }
+     ]
+     ```
+
+2. **Obsługa przycisku "Edytuj" w DocumentDetailView**
+   - Przekazywanie handlera `onEdit` w DocumentHeader (już zaimplementowane)
+   - Implementacja przekierowania z DocumentDetailView:
+     ```javascript
+     const handleEditDocument = () => {
+       window.location.href = `/documents/${documentId}/edit?referrer=document_detail`;
+     };
+     ```
+
+## 12. Kroki implementacji
 1. **Utworzenie podstawowych typów**
    - Zdefiniowanie interfejsów i typów wymaganych przez komponenty
+   - Rozszerzenie DocumentViewModel o pole initialContent i ai_flashcards_count
 
 2. **Implementacja hooków zarządzania stanem**
-   - Utworzenie `useDocumentForm`, `useDocumentFetch`, `useGenerateFlashcards`, `useNavigationPrompt`
+   - Rozszerzenie useDocumentForm o funkcję hasContentChanged
+   - Implementacja hooka useFlashcardsRegenerationDialog
+   - Implementacja logiki kierującej użytkownika do odpowiedniego widoku po zapisie
 
 3. **Implementacja komponentów pomocniczych**
-   - Utworzenie `ValidationMessage`, `CharacterCounter`, `NavigationPrompt`, `RegenerationWarningDialog`
+   - Implementacja komponentu Breadcrumbs z dynamiczną ścieżką
+   - Implementacja komponentu FlashcardsRegenerationDialog
+   - Utworzenie pozostałych komponentów pomocniczych
 
 4. **Implementacja komponentów formularza**
-   - Utworzenie `TitleInput`, `ContentTextarea`, `SubmitButtonGroup`
+   - Utworzenie komponentów formularza z obsługą nowych propsów
 
-5. **Implementacja głównego formularza**
-   - Utworzenie `DocumentEditForm` integrującego komponenty formularza
+5. **Implementacja logiki różnych ścieżek**
+   - Oddzielna logika dla nowego dokumentu (automatyczne generowanie)
+   - Oddzielna logika dla edycji dokumentu (dialog z pytaniem)
+   - Ostrzeżenie o usunięciu istniejących fiszek AI
+   - **Zamarkowanie funkcjonalności regenerowania fiszek jako niedostępnej** (z odpowiednim wyjaśnieniem w UI)
 
 6. **Implementacja widoku głównego**
-   - Utworzenie `DocumentEditView` integrującego wszystkie komponenty i hooki
+   - Utworzenie DocumentEditView z obsługą propsów documentId, topicId i referrer
+   - Implementacja logiki przekierowań po zapisie
 
 7. **Dodanie obsługi routingu**
+   - Konfiguracja obsługi parametru referrer w URL
    - Konfiguracja ścieżek `/documents/:id/edit` i `/topics/:id/documents/new`
 
 8. **Integracja z API**
    - Implementacja obsługi endpointów API dla pobierania, zapisywania dokumentu i generowania fiszek
+   - Rozszerzenie logiki o wykrywanie zmian w treści dokumentu
+   - **Przygotowanie miejsca dla przyszłej integracji z endpointem regeneracji fiszek** (gdy będzie gotowy)
 
 9. **Implementacja walidacji**
    - Dodanie walidacji formularza, wyświetlanie komunikatów o błędach
@@ -407,6 +562,7 @@ DocumentEditView korzysta z dwóch głównych endpointów API:
 
 11. **Testy i debugowanie**
     - Testowanie różnych ścieżek użytkownika, weryfikacja poprawności działania
+    - Sprawdzenie poprawności przekierowań po operacjach
 
 12. **Optymalizacja i refaktoryzacja**
     - Analiza wydajności, usunięcie zbędnego kodu, poprawa jakości 

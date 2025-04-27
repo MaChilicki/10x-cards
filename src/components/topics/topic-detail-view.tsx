@@ -5,13 +5,13 @@ import { TopicHeader } from "./topic-header";
 import { DocumentList } from "@/components/documents/document-list";
 import { EmptyState } from "@/components/documents/empty-state";
 import { ConfirmDeleteModal } from "@/components/documents/confirm-delete-modal";
-import { DocumentsPerPageSelect } from "@/components/documents/documents-per-page-select";
 import type { DocumentViewModel } from "@/components/documents/types";
-import type { DocumentsSortModel } from "@/components/documents/hooks/use-documents-list";
+import type { DocumentsSortModel } from "@/components/documents/types";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "@/lib/hooks/use-navigate";
+import { useSearchParams } from "../hooks/use-search-params";
 import { logger } from "@/lib/services/logger.service";
 
 interface TopicDetailViewProps {
@@ -23,7 +23,26 @@ type PerPageValue = 12 | 24 | 36;
 
 const TopicDetailView = ({ topicId }: React.ComponentProps<"div"> & TopicDetailViewProps) => {
   const navigate = useNavigate();
+  const { searchParams, setParams } = useSearchParams();
   const { topic, isLoading: isTopicLoading, error: topicError, refetch: refetchTopic } = useTopicDetail(topicId);
+
+  const [initialSort, setInitialSort] = useState<DocumentsSortModel>({ sortBy: "created_at", sortOrder: "desc" });
+  const [initialPage, setInitialPage] = useState(1);
+  const [initialItemsPerPage, setInitialItemsPerPage] = useState<number>(24);
+
+  useEffect(() => {
+    const sortBy = searchParams.get("sort_by") as DocumentsSortModel["sortBy"];
+    const sortOrder = searchParams.get("sort_order") as DocumentsSortModel["sortOrder"];
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const perPage = parseInt(searchParams.get("per_page") || "24", 10);
+
+    if (sortBy && sortOrder) {
+      setInitialSort({ sortBy, sortOrder });
+      setInitialPage(page);
+      setInitialItemsPerPage(perPage);
+    }
+    return undefined;
+  }, [searchParams]);
 
   const {
     documents,
@@ -32,27 +51,23 @@ const TopicDetailView = ({ topicId }: React.ComponentProps<"div"> & TopicDetailV
     pagination,
     refetch: refetchDocuments,
     setPage,
-    setPerPage,
+    setItemsPerPage,
     sort,
     updateSort,
-  } = useDocumentsList(topicId);
+  } = useDocumentsList({
+    topicId,
+    initialSort,
+    initialPage,
+    initialItemsPerPage,
+  });
 
   const [documentToDelete, setDocumentToDelete] = useState<DocumentViewModel | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<Error | null>(null);
 
-  const updateUrlParams = (params: Record<string, string>): void => {
-    const searchParams = new URLSearchParams(window.location.search);
-    Object.entries(params).forEach(([key, value]) => {
-      searchParams.set(key, value);
-    });
-    navigate(`?${searchParams.toString()}`, { replace: true });
-  };
-
   const handleSort = (newSort: DocumentsSortModel): void => {
     updateSort(newSort);
-    setPage(1); // Reset strony przy zmianie sortowania
-    updateUrlParams({
+    setParams({
       sort_by: newSort.sortBy,
       sort_order: newSort.sortOrder,
       page: "1",
@@ -61,14 +76,14 @@ const TopicDetailView = ({ topicId }: React.ComponentProps<"div"> & TopicDetailV
 
   const handlePageChange = (page: number): void => {
     setPage(page);
-    updateUrlParams({ page: page.toString() });
+    setParams({ page: page.toString() });
   };
 
-  const handlePerPageChange = (perPage: PerPageValue): void => {
-    setPerPage(perPage);
-    setPage(1); // Reset strony przy zmianie liczby elementów
-    updateUrlParams({
-      per_page: perPage.toString(),
+  const handlePerPageChange = (perPage: number): void => {
+    const validatedPerPage = perPage as PerPageValue;
+    setItemsPerPage(validatedPerPage);
+    setParams({
+      per_page: validatedPerPage.toString(),
       page: "1",
     });
   };
@@ -109,40 +124,6 @@ const TopicDetailView = ({ topicId }: React.ComponentProps<"div"> & TopicDetailV
     }
   };
 
-  // Inicjalizacja parametrów z URL
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const page = params.get("page");
-    const perPage = params.get("per_page");
-    const sortBy = params.get("sort_by");
-    const sortOrder = params.get("sort_order");
-
-    if (page) {
-      const pageNum = parseInt(page, 10);
-      if (!isNaN(pageNum) && pageNum > 0) {
-        setPage(pageNum);
-      }
-    }
-
-    if (perPage) {
-      const perPageValue = parseInt(perPage, 10) as PerPageValue;
-      if ([12, 24, 36].includes(perPageValue)) {
-        setPerPage(perPageValue);
-      }
-    }
-
-    if (sortBy && sortOrder) {
-      if (["name", "created_at", "updated_at"].includes(sortBy) && ["asc", "desc"].includes(sortOrder)) {
-        updateSort({
-          sortBy: sortBy as DocumentsSortModel["sortBy"],
-          sortOrder: sortOrder as DocumentsSortModel["sortOrder"],
-        });
-      }
-    }
-
-    return () => undefined;
-  }, [setPage, setPerPage, updateSort]); // Dodajemy zależności
-
   if (topicError) {
     return (
       <div className="flex flex-col items-center gap-4">
@@ -181,19 +162,25 @@ const TopicDetailView = ({ topicId }: React.ComponentProps<"div"> & TopicDetailV
         <EmptyState topicId={topicId} />
       ) : (
         <>
-          <div className="flex justify-end mb-4">
-            <DocumentsPerPageSelect value={pagination.itemsPerPage as PerPageValue} onChange={handlePerPageChange} />
+          <div className="mt-8">
+            <DocumentList
+              documents={documents}
+              isLoading={isDocumentsLoading}
+              pagination={{
+                currentPage: pagination.currentPage,
+                totalPages: pagination.totalPages,
+                totalItems: pagination.totalItems,
+                itemsPerPage: pagination.itemsPerPage,
+                availablePerPage: [12, 24, 36],
+              }}
+              onDelete={handleDeleteDocument}
+              onSort={handleSort}
+              sort={sort}
+              onAddDocument={handleAddDocument}
+              onPageChange={handlePageChange}
+              onItemsPerPageChange={handlePerPageChange}
+            />
           </div>
-          <DocumentList
-            documents={documents}
-            isLoading={isDocumentsLoading}
-            pagination={pagination}
-            onDelete={handleDeleteDocument}
-            onSort={handleSort}
-            sort={sort}
-            onAddDocument={handleAddDocument}
-            onPageChange={handlePageChange}
-          />
         </>
       )}
 

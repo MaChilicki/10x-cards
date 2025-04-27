@@ -1,15 +1,28 @@
 import { z } from "zod";
-import type { FlashcardSource } from "../../types";
+
+// Lista dozwolonych pól sortowania
+const ALLOWED_SORT_FIELDS = [
+  "front_modified",
+  "created_at",
+  "updated_at",
+  "source",
+  "-front_modified",
+  "-created_at",
+  "-updated_at",
+  "-source",
+] as const;
 
 // Walidacja parametrów zapytania dla listy fiszek
 export const flashcardsQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().optional().default(10),
-  sort: z.string().optional(),
-  document_id: z.string().uuid().optional(),
+  sort: z.enum(ALLOWED_SORT_FIELDS).optional().default("created_at"),
+  document_id: z.string().uuid(),
   topic_id: z.string().uuid().optional(),
   source: z.enum(["ai", "manual"] as const).optional(),
-  is_approved: z.coerce.boolean().optional(),
+  is_approved: z.union([z.boolean(), z.enum(["true", "false"]).transform((val) => val === "true")]).optional(),
+  is_modified: z.union([z.boolean(), z.enum(["true", "false"]).transform((val) => val === "true")]).optional(),
+  is_disabled: z.union([z.boolean(), z.enum(["true", "false"]).transform((val) => val === "true")]).optional(),
 });
 
 // Walidacja pojedynczej fiszki przy tworzeniu

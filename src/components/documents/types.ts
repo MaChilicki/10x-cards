@@ -3,6 +3,9 @@ import type { DocumentDto, FlashcardDto, PaginationDto } from "@/types";
 export interface DocumentsSortModel {
   sortBy: "name" | "created_at" | "updated_at";
   sortOrder: "asc" | "desc";
+}
+
+export interface DocumentsQueryModel extends DocumentsSortModel {
   page: number;
   limit: number;
 }
@@ -17,6 +20,8 @@ export interface PaginationModel {
 
 export interface DocumentViewModel extends DocumentDto {
   flashcards_count: number;
+  ai_flashcards_count?: number;
+  manual_flashcards_count?: number;
   isAiGenerated?: boolean;
 }
 

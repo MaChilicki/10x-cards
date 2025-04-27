@@ -198,13 +198,14 @@ Głównym problemem, z jakim borykają się użytkownicy, jest czasochłonność
   2. Po potwierdzeniu, dokument i wszystkie powiązane fiszki są usuwane z systemu.
   3. Użytkownik otrzymuje potwierdzenie pomyślnego usunięcia.
 
-### US-017: Grupowe zatwierdzanie fiszek
-- Tytuł: Zatwierdzanie wielu fiszek jednocześnie
-- Opis: Użytkownik może zatwierdzić wiele fiszek jednocześnie, w tym wszystkie fiszki powiązane z danym dokumentem, co znacznie przyspiesza proces akceptacji.
+### US-017: Zatwierdzanie fiszek
+- Tytuł: Zatwierdzanie fiszek do dokumentu
+- Opis: Użytkownik może zatwierdzić jedną, wiele lub wszystkie fiszki dokumentu jednocześnie, co znacznie przyspiesza proces akceptacji.
 - Kryteria akceptacji:
   1. System umożliwia zaznaczenie wielu fiszek i zatwierdzenie ich jednym kliknięciem.
   2. Istnieje opcja "Zatwierdź wszystkie" dla fiszek powiązanych z dokumentem.
   3. System wyświetla podsumowanie liczby zatwierdzonych fiszek.
+  4. Zatwierdzenie wszystkich fiszek powoduje powrót do widoku document detail.
 
 ### US-018: Zarządzanie zależnościami między tematami
 - Tytuł: Zachowanie integralności danych podczas zarządzania tematami

@@ -9,6 +9,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { LoadingSpinner } from "./loading-spinner";
+import { cn } from "@/lib/utils";
 
 interface ConfirmationDialogProps {
   isOpen: boolean;
@@ -18,30 +19,39 @@ interface ConfirmationDialogProps {
   onConfirm: () => void | Promise<void>;
   onClose: () => void;
   isSubmitting?: boolean;
+  className?: string;
 }
 
 export function ConfirmationDialog({
   isOpen,
   title,
   description,
-  confirmText = "Potwierdź",
+  confirmText = "Zatwierdź",
   onConfirm,
   onClose,
   isSubmitting = false,
+  className,
 }: ConfirmationDialogProps) {
+  const handleConfirm = async () => {
+    await onConfirm();
+    onClose();
+  };
+
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <AlertDialogContent>
+      <AlertDialogContent className={cn(className)}>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+          <AlertDialogDescription>
+            <div dangerouslySetInnerHTML={{ __html: description }} />
+          </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isSubmitting}>Anuluj</AlertDialogCancel>
+          <AlertDialogCancel disabled={isSubmitting}>Nie</AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
-              onConfirm();
+              handleConfirm();
             }}
             disabled={isSubmitting}
           >

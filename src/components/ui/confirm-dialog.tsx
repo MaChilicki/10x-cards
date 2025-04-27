@@ -17,6 +17,7 @@ interface ConfirmDialogProps {
   confirmText?: string;
   onConfirm: () => Promise<void>;
   onCancel: () => void;
+  dangerousHTML?: boolean;
 }
 
 export function ConfirmDialog({
@@ -26,6 +27,7 @@ export function ConfirmDialog({
   confirmText = "Potwierdź",
   onConfirm,
   onCancel,
+  dangerousHTML = false,
 }: ConfirmDialogProps) {
   const [isConfirming, setIsConfirming] = useState(false);
 
@@ -43,7 +45,11 @@ export function ConfirmDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          {dangerousHTML ? (
+            <DialogDescription className="text-foreground/80" dangerouslySetInnerHTML={{ __html: description }} />
+          ) : (
+            <DialogDescription>{description}</DialogDescription>
+          )}
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={onCancel} disabled={isConfirming}>

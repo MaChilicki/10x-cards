@@ -85,36 +85,38 @@ export function TopicsListView() {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Tematy</CardTitle>
-        <Button onClick={handleOpenAddModal}>Dodaj temat</Button>
-      </CardHeader>
-      <CardContent>
-        <TopicsList
-          topics={topics}
-          onTopicClick={handleTopicClick}
-          onEditClick={handleOpenEditModal}
-          onDeleteClick={handleOpenDeleteDialog}
+    <div className="container mx-auto px-4 py-8">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Tematy</CardTitle>
+          <Button onClick={handleOpenAddModal}>Dodaj temat</Button>
+        </CardHeader>
+        <CardContent>
+          <TopicsList
+            topics={topics}
+            onTopicClick={handleTopicClick}
+            onEditClick={handleOpenEditModal}
+            onDeleteClick={handleOpenDeleteDialog}
+          />
+        </CardContent>
+
+        <TopicFormModal
+          isOpen={isModalOpen}
+          isEditMode={isEditMode}
+          initialData={selectedTopic}
+          onClose={handleCloseModal}
+          onSubmit={handleSubmit}
         />
-      </CardContent>
 
-      <TopicFormModal
-        isOpen={isModalOpen}
-        isEditMode={isEditMode}
-        initialData={selectedTopic}
-        onClose={handleCloseModal}
-        onSubmit={handleSubmit}
-      />
-
-      <DeleteTopicDialog
-        isOpen={isDeleteDialogOpen}
-        topic={selectedTopic}
-        deleting={false}
-        error={null}
-        onClose={handleCloseDeleteDialog}
-        onConfirm={handleDelete}
-      />
-    </Card>
+        <DeleteTopicDialog
+          isOpen={isDeleteDialogOpen}
+          topic={selectedTopic}
+          deleting={false}
+          error={null}
+          onClose={handleCloseDeleteDialog}
+          onConfirm={handleDelete}
+        />
+      </Card>
+    </div>
   );
 }

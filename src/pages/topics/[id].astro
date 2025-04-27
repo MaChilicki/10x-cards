@@ -9,5 +9,5 @@ if (!id) {
 ---
 
 <Layout title="Szczegóły tematu">
-  <TopicDetailView client:load topicId={id} />
+  <TopicDetailView client:only="react" topicId={id} />
 </Layout>

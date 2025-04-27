@@ -117,11 +117,18 @@ export const PUT: APIRoute = async ({ params, request }) => {
   }
 };
 
-export const DELETE: APIRoute = async ({ params }) => {
+export const DELETE: APIRoute = async ({ params, request }) => {
   try {
     const { id } = params;
     if (!id) {
       return new Response(JSON.stringify({ error: "Nie podano identyfikatora fiszki" }), { status: 400 });
+    }
+
+    const body = await request.json();
+    if (!body.source || !["ai", "manual"].includes(body.source)) {
+      return new Response(JSON.stringify({ error: "Nieprawidłowy parametr source. Dozwolone wartości: ai, manual" }), {
+        status: 400,
+      });
     }
 
     const flashcard = await flashcardsService.getFlashcardById(id);
@@ -134,7 +141,7 @@ export const DELETE: APIRoute = async ({ params }) => {
       );
     }
 
-    await flashcardsService.deleteFlashcard(id, flashcard.source as FlashcardSource);
+    await flashcardsService.deleteFlashcard(id, body.source as FlashcardSource);
 
     return new Response(JSON.stringify({ message: `Pomyślnie usunięto fiszkę` }), { status: 200 });
   } catch (error) {

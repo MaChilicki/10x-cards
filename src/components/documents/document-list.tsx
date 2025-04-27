@@ -1,11 +1,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { FileText, Trash2, Edit, Plus } from "lucide-react";
-import type { DocumentViewModel } from "./types";
+import type { DocumentViewModel, DocumentsSortModel } from "./types";
 import { useNavigate } from "@/lib/hooks/use-navigate";
-import type { DocumentsSortModel } from "./hooks/use-documents-list";
+import { DocumentsSorter } from "./documents-sorter";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface DocumentListProps {
   documents: DocumentViewModel[];
@@ -22,6 +23,7 @@ interface DocumentListProps {
   sort: DocumentsSortModel;
   onAddDocument: () => void;
   onPageChange: (page: number) => void;
+  onItemsPerPageChange: (value: number) => void;
 }
 
 export function DocumentList({
@@ -33,6 +35,7 @@ export function DocumentList({
   sort,
   onAddDocument,
   onPageChange,
+  onItemsPerPageChange,
 }: DocumentListProps) {
   const navigate = useNavigate();
 
@@ -43,34 +46,13 @@ export function DocumentList({
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <Select
-            value={sort.sortBy}
-            onValueChange={(value) => onSort({ ...sort, sortBy: value as DocumentsSortModel["sortBy"] })}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Sortuj według" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="name">Nazwa</SelectItem>
-              <SelectItem value="created_at">Data utworzenia</SelectItem>
-              <SelectItem value="updated_at">Data aktualizacji</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select
-            value={sort.sortOrder}
-            onValueChange={(value) => onSort({ ...sort, sortOrder: value as DocumentsSortModel["sortOrder"] })}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Kierunek sortowania" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="asc">Rosnąco</SelectItem>
-              <SelectItem value="desc">Malejąco</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <Button onClick={onAddDocument} className="gap-2">
+        <DocumentsSorter
+          currentSort={sort}
+          onChange={onSort}
+          itemsPerPage={pagination.itemsPerPage}
+          onItemsPerPageChange={onItemsPerPageChange}
+        />
+        <Button onClick={onAddDocument} className="gap-2 mb-6">
           <Plus className="h-4 w-4" />
           Dodaj dokument
         </Button>
@@ -115,9 +97,26 @@ export function DocumentList({
             </CardHeader>
             <CardContent>
               <div className="text-sm text-muted-foreground">
-                <div>Fiszki: {document.flashcards_count}</div>
-                <div>Utworzono: {new Date(document.created_at).toLocaleDateString()}</div>
-                <div>Zaktualizowano: {new Date(document.updated_at).toLocaleDateString()}</div>
+                <div className="flex flex-col space-y-2">
+                  <div className="flex items-center gap-2">
+                    Fiszki:
+                    {(document.ai_flashcards_count ?? 0) > 0 && (
+                      <Badge className={cn("text-white bg-sky-700 hover:bg-sky-800")}>
+                        AI: {document.ai_flashcards_count}
+                      </Badge>
+                    )}
+                    {(document.manual_flashcards_count ?? 0) > 0 && (
+                      <Badge className={cn("text-white bg-red-700 hover:bg-red-800")}>
+                        Własne: {document.manual_flashcards_count}
+                      </Badge>
+                    )}
+                    {(document.ai_flashcards_count ?? 0) <= 0 && (document.manual_flashcards_count ?? 0) <= 0 && (
+                      <span>0</span>
+                    )}
+                  </div>
+                  <div>Utworzono: {new Date(document.created_at).toLocaleDateString()}</div>
+                  <div>Zaktualizowano: {new Date(document.updated_at).toLocaleDateString()}</div>
+                </div>
               </div>
             </CardContent>
           </Card>

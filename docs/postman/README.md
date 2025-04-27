@@ -1,51 +1,75 @@
-# Kolekcja Postman dla API 10xCards
+# Kolekcja Postman dla 10xCards API
 
-## Instalacja
+## Jak używać
 
 1. Zainstaluj [Postman](https://www.postman.com/downloads/)
-2. Zaimportuj kolekcję `flashcards-api.postman_collection.json`
-3. Zaimportuj środowisko `10xcards-local.postman_environment.json`
+2. Zaimportuj kolekcję:
+   - Otwórz Postman
+   - Kliknij "Import" w górnym lewym rogu
+   - Przeciągnij plik `10xCards.postman_collection.json` lub wybierz go z dysku
+   - Kliknij "Import"
 
-## Konfiguracja
+## Konfiguracja środowiska
 
-1. W Postman wybierz zaimportowane środowisko "10xCards - Local"
-2. Zaktualizuj zmienne środowiskowe według potrzeb:
-   - `baseUrl` - adres lokalnego serwera (domyślnie: http://localhost:3000)
-   - `flashcard_id` - ID testowej fiszki
-   - `topic_id` - ID testowego tematu
-   - `document_id` - ID testowego dokumentu
+1. Utwórz nowe środowisko w Postman:
+   - Kliknij ikonę koła zębatego (⚙️) w prawym górnym rogu
+   - Wybierz "Manage Environments"
+   - Kliknij "Add"
+   - Nazwij środowisko (np. "10xCards Local")
 
-## Dostępne endpointy
+2. Dodaj zmienne środowiskowe:
+   ```json
+   {
+     "baseUrl": "http://localhost:3000"
+   }
+   ```
 
-### Fiszki (Flashcards)
-
-- `GET /api/flashcards` - Lista fiszek z filtrowaniem i paginacją
-- `POST /api/flashcards` - Tworzenie nowych fiszek
-- `GET /api/flashcards/{id}` - Pobranie pojedynczej fiszki
-- `PUT /api/flashcards/{id}` - Aktualizacja fiszki
-- `PATCH /api/flashcards/{id}/approve` - Zatwierdzenie pojedynczej fiszki
-- `PATCH /api/flashcards/approve-bulk` - Zatwierdzenie wielu fiszek
-- `PATCH /api/flashcards/approve-by-document` - Zatwierdzenie wszystkich fiszek dla dokumentu
-- `DELETE /api/flashcards/{id}` - Usunięcie fiszki
+3. Zapisz środowisko i wybierz je z rozwijanej listy w prawym górnym rogu
 
 ## Przykłady użycia
 
-1. **Pobranie listy fiszek**
-   - Użyj requestu "Get Flashcards List"
-   - Możesz modyfikować parametry query:
-     - `page` - numer strony
-     - `limit` - liczba elementów na stronę
-     - `topic_id` - filtrowanie po temacie
-     - `document_id` - filtrowanie po dokumencie
-     - `source` - filtrowanie po źródle ('ai' lub 'manual')
-     - `is_approved` - filtrowanie po statusie zatwierdzenia
+### Regeneracja fiszek AI
 
-2. **Tworzenie fiszki**
-   - Użyj requestu "Create Flashcards"
-   - Zmodyfikuj body requestu według potrzeb
-   - Pamiętaj o ustawieniu prawidłowych wartości dla `topic_id` i `document_id`
+Endpoint: `POST {{baseUrl}}/api/flashcards/ai-regenerate`
 
-3. **Zatwierdzanie fiszek**
-   - Możesz zatwierdzać fiszki pojedynczo, grupowo lub dla całego dokumentu
-   - Dla zatwierdzania grupowego, zaktualizuj listę `flashcard_ids` w body requestu
-   - Dla zatwierdzania po dokumencie, użyj prawidłowego `document_id` 
+Przykładowe dane:
+```json
+{
+  "document_id": "dbcc7c6e-51f9-4c32-b8f2-9019dca0d525",
+  "force_regenerate": true
+}
+```
+
+Ten request:
+1. Wyłączy wszystkie istniejące fiszki AI dla dokumentu (soft-delete)
+2. Wygeneruje nowy zestaw fiszek
+3. Zwróci listę nowych fiszek wraz z liczbą wyłączonych
+
+Spodziewana odpowiedź:
+```json
+{
+  "flashcards": [
+    {
+      "front_original": "Co to jest TypeScript?",
+      "back_original": "TypeScript to typowany nadzbiór JavaScript...",
+      "topic_id": "123e4567-e89b-12d3-a456-426614174000",
+      "document_id": "dbcc7c6e-51f9-4c32-b8f2-9019dca0d525",
+      "source": "ai",
+      "is_approved": false
+    }
+  ],
+  "disabled_count": 5
+}
+```
+
+## Testy
+
+Kolekcja zawiera wbudowane testy sprawdzające:
+- Kod odpowiedzi (200)
+- Obecność tablicy `flashcards` w odpowiedzi
+- Obecność pola `disabled_count` w odpowiedzi
+
+Aby uruchomić testy:
+1. Otwórz request "Regenerate AI Flashcards"
+2. Kliknij przycisk "Send"
+3. Przejdź do zakładki "Test Results" w dolnym panelu 

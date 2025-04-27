@@ -208,29 +208,38 @@
 - **Response Payload**:
   ```json
   {
-    "documents": [
+    "data": [
       {
         "id": "string",
         "user_id": "string",
         "name": "string",
         "content": "string",
         "created_at": "ISODate string",
-        "updated_at": "ISODate string"
+        "updated_at": "ISODate string",
+        "flashcards_count": "number",
+        "ai_flashcards_count": "number",
+        "manual_flashcards_count": "number"
       }
     ],
-    "total": "number"
+    "pagination": {
+      "page": "number",
+      "limit": "number",
+      "total": "number",
+      "total_pages": "number"
+    }
   }
   ```
 - **Success Codes**: 200 OK
-- **Error Codes**: 401 Unauthorized, 500 Internal Server Error
+- **Error Codes**: 400 Bad Request, 500 Internal Server Error
 
 #### 2. POST /api/documents
-- **Description**: Create a new document.
+- **Description**: Create a new document. After successful creation, an AI flashcard generation process is automatically initiated.
 - **Request Payload**:
   ```json
   {
     "name": "string",
-    "content": "string"
+    "content": "string",
+    "topic_id": "string (optional)"
   }
   ```
 - **Response Payload**:
@@ -240,12 +249,13 @@
     "user_id": "string",
     "name": "string",
     "content": "string",
+    "topic_id": "string or null",
     "created_at": "ISODate string",
     "updated_at": "ISODate string"
   }
   ```
 - **Success Codes**: 201 Created
-- **Error Codes**: 400 Bad Request, 401 Unauthorized
+- **Error Codes**: 400 Bad Request, 500 Internal Server Error
 
 #### 3. GET /api/documents/{id}
 - **Description**: Retrieve details of a specific document.
@@ -256,12 +266,13 @@
     "user_id": "string",
     "name": "string",
     "content": "string",
+    "topic_id": "string or null",
     "created_at": "ISODate string",
     "updated_at": "ISODate string"
   }
   ```
 - **Success Codes**: 200 OK
-- **Error Codes**: 401 Unauthorized, 404 Not Found
+- **Error Codes**: 404 Not Found, 500 Internal Server Error
 
 #### 4. PUT /api/documents/{id}
 - **Description**: Update an existing document.
@@ -279,12 +290,13 @@
     "user_id": "string",
     "name": "string",
     "content": "string",
+    "topic_id": "string or null",
     "created_at": "ISODate string",
     "updated_at": "ISODate string"
   }
   ```
 - **Success Codes**: 200 OK
-- **Error Codes**: 400 Bad Request, 401 Unauthorized, 404 Not Found
+- **Error Codes**: 400 Bad Request, 404 Not Found, 500 Internal Server Error
 
 #### 5. DELETE /api/documents/{id}
 - **Description**: Delete a document.
@@ -295,20 +307,25 @@
   }
   ```
 - **Success Codes**: 200 OK
-- **Error Codes**: 401 Unauthorized, 404 Not Found
+- **Error Codes**: 404 Not Found, 500 Internal Server Error
 
 ### Flashcards Endpoints
 
 #### 1. GET /api/flashcards
 - **Description**: Retrieve a list of flashcards.
 - **Query Parameters**: 
-  - `page` (number), `limit` (number), `sort` (string)
-  - `document_id` (string), `topic_id` (string)
-  - `source` (string, 'ai' or 'manual', optional)
+  - `page` (number, default: 1)
+  - `limit` (number, default: 10)
+  - `sort` (string)
+  - `document_id` (string)
+  - `topic_id` (string)
+  - `source` (string, 'ai' or 'manual')
+  - `is_approved` (boolean)
+  - `is_disabled` (boolean)
 - **Response Payload**:
   ```json
   {
-    "flashcards": [
+    "data": [
       {
         "id": "string",
         "user_id": "string",
@@ -323,53 +340,45 @@
         "is_approved": "boolean",
         "modification_percentage": "number",
         "is_disabled": "boolean",
-        "spaced_repetition_data": {},
         "created_at": "ISODate string",
         "updated_at": "ISODate string"
       }
     ],
-    "total": "number"
+    "pagination": {
+      "page": "number",
+      "limit": "number",
+      "total": "number",
+      "total_pages": "number"
+    }
   }
   ```
 - **Success Codes**: 200 OK
-- **Error Codes**: 401 Unauthorized, 500 Internal Server Error
+- **Error Codes**: 400 Bad Request, 500 Internal Server Error
 
 #### 2. POST /api/flashcards
-- **Description**: Create a new flashcard manually.
+- **Description**: Create new flashcards manually.
 - **Request Payload**:
   ```json
   {
-    "front_original": "string",
-    "back_original": "string",
-    "document_id": "string (optional)",
-    "topic_id": "string (optional)",
-    "source": "ai | manual",
-    "is_approved": "boolean (optional)"
+    "flashcards": [
+      {
+        "front_original": "string",
+        "back_original": "string",
+        "document_id": "string (optional)",
+        "topic_id": "string (optional)",
+        "source": "manual"
+      }
+    ]
   }
   ```
 - **Response Payload**:
   ```json
   {
-    "id": "string",
-    "user_id": "string",
-    "document_id": "string or null",
-    "topic_id": "string or null",
-    "front_original": "string",
-    "back_original": "string",
-    "front_modified": "string or null",
-    "back_modified": "string or null",
-    "source": "ai | manual",
-    "is_modified": "boolean",
-    "is_approved": "boolean",
-    "modification_percentage": "number",
-    "is_disabled": "boolean",
-    "spaced_repetition_data": {},
-    "created_at": "ISODate string",
-    "updated_at": "ISODate string"
+    "message": "Flashcards created successfully"
   }
   ```
 - **Success Codes**: 201 Created
-- **Error Codes**: 400 Bad Request, 401 Unauthorized
+- **Error Codes**: 400 Bad Request, 500 Internal Server Error
 
 #### 3. GET /api/flashcards/{id}
 - **Description**: Retrieve details of a specific flashcard.
@@ -389,17 +398,16 @@
     "is_approved": "boolean",
     "modification_percentage": "number",
     "is_disabled": "boolean",
-    "spaced_repetition_data": {},
     "created_at": "ISODate string",
     "updated_at": "ISODate string"
   }
   ```
 - **Success Codes**: 200 OK
-- **Error Codes**: 401 Unauthorized, 404 Not Found
+- **Error Codes**: 404 Not Found, 500 Internal Server Error
 
 #### 4. PUT /api/flashcards/{id}
 - **Description**: Update a flashcard's content.
-- **Request Payload** (example):
+- **Request Payload**:
   ```json
   {
     "front_modified": "string (optional)",
@@ -409,29 +417,31 @@
 - **Response Payload**:
   ```json
   {
-    "id": "string",
-    "user_id": "string",
-    "document_id": "string or null",
-    "topic_id": "string or null",
-    "front_original": "string",
-    "back_original": "string",
-    "front_modified": "string or null",
-    "back_modified": "string or null",
-    "source": "ai | manual",
-    "is_modified": "boolean",
-    "is_approved": "boolean",
-    "modification_percentage": "number",
-    "is_disabled": "boolean",
-    "spaced_repetition_data": {},
-    "created_at": "ISODate string",
-    "updated_at": "ISODate string"
+    "message": "Flashcard updated successfully",
+    "data": {
+      "id": "string",
+      "user_id": "string",
+      "document_id": "string or null",
+      "topic_id": "string or null",
+      "front_original": "string",
+      "back_original": "string",
+      "front_modified": "string or null",
+      "back_modified": "string or null",
+      "source": "ai | manual",
+      "is_modified": "boolean",
+      "is_approved": "boolean",
+      "modification_percentage": "number",
+      "is_disabled": "boolean",
+      "created_at": "ISODate string",
+      "updated_at": "ISODate string"
+    }
   }
   ```
 - **Success Codes**: 200 OK
-- **Error Codes**: 400 Bad Request, 401 Unauthorized, 404 Not Found
+- **Error Codes**: 400 Bad Request, 404 Not Found, 500 Internal Server Error
 
 #### 5. DELETE /api/flashcards/{id}
-- **Description**: Soft-delete a flashcard by setting `is_disabled` to true.
+- **Description**: Delete a flashcard. For AI-generated flashcards, performs a soft-delete by setting `is_disabled` to true. For manually created flashcards, performs a hard-delete (completely removes the record from the database).
 - **Response Payload**:
   ```json
   {
@@ -439,7 +449,112 @@
   }
   ```
 - **Success Codes**: 200 OK
-- **Error Codes**: 401 Unauthorized, 404 Not Found
+- **Error Codes**: 404 Not Found, 500 Internal Server Error
+
+#### 6. PATCH /api/flashcards/{id}/approve
+- **Description**: Approve a single AI-generated flashcard.
+- **Response Payload**:
+  ```json
+  {
+    "message": "Flashcard approved successfully",
+    "data": {
+      "id": "string",
+      "user_id": "string",
+      "document_id": "string or null",
+      "topic_id": "string or null",
+      "front_original": "string",
+      "back_original": "string",
+      "front_modified": "string or null",
+      "back_modified": "string or null",
+      "source": "ai",
+      "is_modified": "boolean",
+      "is_approved": "boolean",
+      "modification_percentage": "number",
+      "is_disabled": "boolean",
+      "created_at": "ISODate string",
+      "updated_at": "ISODate string"
+    }
+  }
+  ```
+- **Success Codes**: 200 OK
+- **Error Codes**: 400 Bad Request, 404 Not Found, 500 Internal Server Error
+
+#### 7. PATCH /api/flashcards/approve-bulk
+- **Description**: Approve multiple AI-generated flashcards in bulk.
+- **Request Payload**:
+  ```json
+  {
+    "flashcard_ids": ["string"]
+  }
+  ```
+- **Response Payload**:
+  ```json
+  {
+    "message": "Flashcards approved successfully",
+    "data": {
+      "approved_count": "number",
+      "flashcards": [
+        {
+          "id": "string",
+          "user_id": "string",
+          "document_id": "string or null",
+          "topic_id": "string or null",
+          "front_original": "string",
+          "back_original": "string",
+          "front_modified": "string or null",
+          "back_modified": "string or null",
+          "source": "ai",
+          "is_modified": "boolean",
+          "is_approved": "boolean",
+          "modification_percentage": "number",
+          "is_disabled": "boolean",
+          "created_at": "ISODate string",
+          "updated_at": "ISODate string"
+        }
+      ]
+    }
+  }
+  ```
+- **Success Codes**: 200 OK
+- **Error Codes**: 400 Bad Request, 500 Internal Server Error
+
+#### 8. PATCH /api/flashcards/approve-by-document
+- **Description**: Approve all AI-generated flashcards related to a specific document.
+- **Request Payload**:
+  ```json
+  {
+    "document_id": "string"
+  }
+  ```
+- **Response Payload**:
+  ```json
+  {
+    "data": {
+      "approved_count": "number",
+      "flashcards": [
+        {
+          "id": "string",
+          "user_id": "string",
+          "document_id": "string or null",
+          "topic_id": "string or null",
+          "front_original": "string",
+          "back_original": "string",
+          "front_modified": "string or null",
+          "back_modified": "string or null",
+          "source": "ai",
+          "is_modified": "boolean",
+          "is_approved": "boolean",
+          "modification_percentage": "number",
+          "is_disabled": "boolean",
+          "created_at": "ISODate string",
+          "updated_at": "ISODate string"
+        }
+      ]
+    }
+  }
+  ```
+- **Success Codes**: 200 OK
+- **Error Codes**: 400 Bad Request, 404 Not Found, 500 Internal Server Error
 
 ##### AI-Generated Flashcards
 
@@ -471,7 +586,6 @@
         "is_approved": "boolean",
         "modification_percentage": "number",
         "is_disabled": "boolean",
-        "spaced_repetition_data": {},
         "created_at": "ISODate string",
         "updated_at": "ISODate string"
       }
@@ -479,19 +593,25 @@
   }
   ```
 - **Success Codes**: 200 OK
-- **Error Codes**: 400 Bad Request, 401 Unauthorized
+- **Error Codes**: 400 Bad Request, 500 Internal Server Error
 
 ###### 2. POST /api/flashcards/ai-regenerate
-- **Description**: Re-generate flashcards based on input text when previous generation was rejected.
-- **Request Payload**: (same as ai-generate)
+- **Description**: Re-generate flashcards for an existing document or text. This endpoint soft-deletes all existing AI-generated flashcards (regardless of their `is_disabled` and `is_approved` status) associated with the document_id (if provided) and generates new ones.
+- **Request Payload**:
   ```json
   {
     "text": "string",
     "document_id": "string (optional)",
-    "topic_id": "string (optional)"
+    "topic_id": "string (optional)",
+    "force_regenerate": "boolean (optional, default: false)"
   }
   ```
-- **Response Payload**: (same as ai-generate)
+- **Processing Steps**:
+  1. If document_id is provided, find all existing AI-generated flashcards associated with this document
+  2. Mark all found flashcards as disabled (soft-delete) by setting `is_disabled` = true
+  3. Generate new flashcards using the AI service
+  4. Save the newly generated flashcards to the database
+- **Response Payload**:
   ```json
   {
     "flashcards": [
@@ -509,15 +629,15 @@
         "is_approved": "boolean",
         "modification_percentage": "number",
         "is_disabled": "boolean",
-        "spaced_repetition_data": {},
         "created_at": "ISODate string",
         "updated_at": "ISODate string"
       }
-    ]
+    ],
+    "disabled_count": "number"
   }
   ```
 - **Success Codes**: 200 OK
-- **Error Codes**: 400 Bad Request, 401 Unauthorized
+- **Error Codes**: 400 Bad Request, 404 Not Found (if document_id is provided but not found), 500 Internal Server Error
 
 ### Study Sessions Endpoints
 
@@ -737,6 +857,87 @@ These endpoints are part of the complete system scope but are **not implemented 
 - Supabase RLS (Row Level Security) is leveraged to ensure that users only access their own data.
 - Endpoints related to user registration and login are public, while all other endpoints require authentication.
 
+### Service Implementation Details
+
+#### AiGenerateService
+
+The AiGenerateService requires extension to support the flashcard regeneration functionality:
+
+```typescript
+// Extension to ai-generate.service.ts
+class AiGenerateService {
+  // Existing methods...
+  
+  /**
+   * Regenerate flashcards for a document or text
+   * This method will:
+   * 1. Soft-delete existing AI-generated flashcards for the document (if document_id is provided)
+   * 2. Generate new flashcards using the AI model
+   * 3. Save the new flashcards to the database
+   */
+  async regenerateFlashcards(data: FlashcardAiRegenerateDto): Promise<FlashcardAiRegenerateResponse> {
+    let disabledCount = 0;
+    
+    // If document_id is provided, find and soft-delete existing AI flashcards
+    if (data.document_id) {
+      const { data: existingFlashcards, error } = await this.supabase
+        .from("flashcards")
+        .update({ is_disabled: true })
+        .eq("document_id", data.document_id)
+        .eq("source", "ai")
+        .select("id");
+        
+      if (error) throw error;
+      disabledCount = existingFlashcards?.length || 0;
+    }
+    
+    // Generate new flashcards using the existing method
+    const { flashcards } = await this.generateFlashcards(data);
+    
+    return {
+      flashcards,
+      disabled_count: disabledCount
+    };
+  }
+}
+```
+
+#### Required Types
+
+The following types should be added to the types.ts file to support the flashcard regeneration functionality:
+
+```typescript
+// Extension to types.ts
+
+// Input DTO for flashcard regeneration
+export interface FlashcardAiRegenerateDto extends FlashcardAiGenerateDto {
+  // If true, force regeneration even if some flashcards are already approved
+  force_regenerate?: boolean;
+}
+
+// Response type for flashcard regeneration
+export interface FlashcardAiRegenerateResponse extends FlashcardAiResponse {
+  // Number of flashcards that were soft-deleted (marked as disabled)
+  disabled_count: number;
+}
+```
+
+#### Schema Validation
+
+For input validation, a Zod schema should be created:
+
+```typescript
+// Extension to ai-generate.schema.ts
+
+// Schema for flashcard regeneration
+export const flashcardAiRegenerateSchema = z.object({
+  text: z.string().min(1, "Tekst jest wymagany").max(50000, "Tekst jest zbyt długi"),
+  document_id: z.string().uuid("Nieprawidłowy format UUID").optional(),
+  topic_id: z.string().uuid("Nieprawidłowy format UUID").optional(),
+  force_regenerate: z.boolean().optional().default(false)
+});
+```
+
 ## 4. Validation and Business Logic
 
 - **Data Validation**: 
@@ -756,3 +957,143 @@ These endpoints are part of the complete system scope but are **not implemented 
 - **Security and Performance**:
   - Rate limiting, logging, and input sanitation are implemented at the gateway or middleware level to protect the system.
   - Indexes defined in the schema (e.g., on user_id, topic_id) are leveraged to optimize query performance for list endpoints.
+
+- **Business Logic**:
+  - Flashcard updates trigger database triggers that compute the modification percentage. The API simply passes the modified fields (`front_modified` and `back_modified`).
+  - AI-generated flashcards endpoints validate the input text and ensure previous rejections are handled appropriately (rejected flashcards are preserved for audit).
+  - The AI regeneration endpoint (`POST /api/flashcards/ai-regenerate`) performs soft-deletion of existing AI flashcards by marking them as disabled (`is_disabled = true`) before generating new ones. This ensures that the history of previously generated flashcards is preserved while allowing users to regenerate flashcards as needed.
+  - The regeneration process includes a `force_regenerate` parameter that, when set to true, allows regeneration even if some flashcards are already approved by the user.
+  - List endpoints support pagination, sorting, and filtering through query parameters (e.g., filtering flashcards by document_id or topic_id).
+
+#### Endpoint Implementation
+
+The implementation of the `/api/flashcards/ai-regenerate` endpoint should follow this pattern:
+
+```typescript
+// Implementation in /api/flashcards/ai-regenerate.ts
+
+import type { APIRoute } from "astro";
+import { AiGenerateService } from "../../../lib/services/ai-generate.service";
+import { flashcardAiRegenerateSchema } from "../../../lib/schemas/ai-generate.schema";
+import { logger } from "../../../lib/services/logger.service";
+
+export const prerender = false;
+
+export const POST: APIRoute = async ({ request, locals }) => {
+  try {
+    if (!request.headers.get("Content-Type")?.includes("application/json")) {
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "INVALID_CONTENT_TYPE",
+            message: "Nieprawidłowy format danych",
+            details: "Wymagany Content-Type: application/json",
+          },
+        }),
+        {
+          status: 415,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "INVALID_JSON",
+            message: "Nieprawidłowy format JSON",
+            details: "Nie można sparsować body requestu",
+          },
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const validationResult = flashcardAiRegenerateSchema.safeParse(body);
+    if (!validationResult.success) {
+      logger.info("Nieprawidłowe dane wejściowe dla regeneracji fiszek AI:");
+      logger.error("Szczegóły błędów walidacji:", validationResult.error.errors);
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Nieprawidłowe dane wejściowe",
+            details: validationResult.error.format(),
+          },
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Sprawdzenie czy dokument istnieje, jeśli podano document_id
+    if (validationResult.data.document_id) {
+      const { data: document, error } = await locals.supabase
+        .from("documents")
+        .select("id")
+        .eq("id", validationResult.data.document_id)
+        .single();
+
+      if (error || !document) {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: "DOCUMENT_NOT_FOUND",
+              message: "Dokument nie został znaleziony",
+              details: "Nie można znaleźć dokumentu o podanym ID",
+            },
+          }),
+          {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+    }
+
+    // Inicjalizacja serwisu i regeneracja fiszek
+    const aiService = new AiGenerateService(locals.supabase);
+    const result = await aiService.regenerateFlashcards(validationResult.data);
+
+    logger.debug(`Pomyślnie zregenerowano fiszki AI. Dezaktywowano ${result.disabled_count} istniejących fiszek.`);
+
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  } catch (error) {
+    logger.error("Błąd podczas regenerowania fiszek AI:", error);
+    return new Response(
+      JSON.stringify({
+        error: {
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Wystąpił błąd podczas regenerowania fiszek",
+          details: error instanceof Error ? error.message : "Nieznany błąd",
+        },
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+  }
+};
+```
+
+This endpoint follows the same pattern as the existing ai-generate endpoint but adds the functionality to soft-delete existing flashcards before generating new ones.
+
+## 4. Validation and Business Logic
+</rewritten_file>

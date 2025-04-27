@@ -26,7 +26,7 @@ export function useDocumentDetail(id: string) {
       }));
 
       // Pobierz liczbę niezatwierdzonych fiszek AI
-      const flashcardsResponse = await fetch(`/api/flashcards?document_id=${id}&is_approved=false&source=ai&limit=0`);
+      const flashcardsResponse = await fetch(`/api/flashcards?document_id=${id}&is_approved=false&source=ai&limit=1`);
       if (flashcardsResponse.ok) {
         const { total } = await flashcardsResponse.json();
         setState((prev) => ({

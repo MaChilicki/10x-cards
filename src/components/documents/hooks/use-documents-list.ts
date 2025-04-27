@@ -1,100 +1,136 @@
-import { useState, useEffect, useCallback } from "react";
-import type { DocumentViewModel } from "../types";
-import type { DocumentDto } from "@/types";
+import { useState, useEffect } from "react";
+import type { DocumentsSortModel, DocumentViewModel } from "../types";
 
-export interface DocumentsSortModel {
-  sortBy: "name" | "created_at" | "updated_at";
-  sortOrder: "asc" | "desc";
-}
-
-interface UseDocumentsListOptions {
-  sortBy?: DocumentsSortModel["sortBy"];
-  sortOrder?: DocumentsSortModel["sortOrder"];
+interface UseDocumentsListProps {
+  topicId: string;
+  initialSort?: DocumentsSortModel;
   initialPage?: number;
-  initialPerPage?: number;
+  initialItemsPerPage?: number;
 }
 
-const DEFAULT_OPTIONS: Required<UseDocumentsListOptions> = {
-  sortBy: "created_at",
-  sortOrder: "desc",
-  initialPage: 1,
-  initialPerPage: 24, // Domyślna wartość z DocumentsPerPageSelect
+interface DocumentsResponse {
+  documents: DocumentViewModel[];
+  total: number;
+}
+
+const getSortQueryParam = (sort: DocumentsSortModel): string => {
+  const prefix = sort.sortOrder === "desc" ? "-" : "";
+  return `${prefix}${sort.sortBy}`;
 };
 
-export function useDocumentsList(topicId: string, options: UseDocumentsListOptions = {}) {
-  const {
-    sortBy = DEFAULT_OPTIONS.sortBy,
-    sortOrder = DEFAULT_OPTIONS.sortOrder,
-    initialPage = DEFAULT_OPTIONS.initialPage,
-    initialPerPage = DEFAULT_OPTIONS.initialPerPage,
-  } = options;
-
+export const useDocumentsList = ({
+  topicId,
+  initialSort = { sortBy: "created_at", sortOrder: "desc" },
+  initialPage = 1,
+  initialItemsPerPage = 24,
+}: UseDocumentsListProps) => {
   const [documents, setDocuments] = useState<DocumentViewModel[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const [page, setPage] = useState(initialPage);
-  const [perPage, setPerPage] = useState(initialPerPage);
-  const [sort, setSort] = useState<DocumentsSortModel>({ sortBy, sortOrder });
+  const [sort, setSort] = useState<DocumentsSortModel>(initialSort);
   const [pagination, setPagination] = useState({
     currentPage: initialPage,
     totalPages: 1,
     totalItems: 0,
-    itemsPerPage: initialPerPage,
-    availablePerPage: [12, 24, 36], // Wartości z DocumentsPerPageSelect
+    itemsPerPage: initialItemsPerPage,
   });
 
-  const fetchDocuments = useCallback(async () => {
+  useEffect(() => {
+    setSort(initialSort);
+    setPagination((prev) => ({
+      ...prev,
+      currentPage: initialPage,
+      itemsPerPage: initialItemsPerPage,
+    }));
+    return undefined;
+  }, [initialSort, initialPage, initialItemsPerPage]);
+
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      if (!topicId) return;
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const queryParams = new URLSearchParams({
+          topic_id: topicId,
+          page: String(pagination.currentPage),
+          limit: String(pagination.itemsPerPage),
+          sort: getSortQueryParam(sort),
+        });
+
+        const response = await fetch(`/api/documents?${queryParams}`);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || "Failed to fetch documents");
+        }
+
+        const data: DocumentsResponse = await response.json();
+        setDocuments(data.documents);
+        setPagination((prev) => ({
+          ...prev,
+          totalItems: data.total,
+          totalPages: Math.ceil(data.total / pagination.itemsPerPage),
+        }));
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error("Unknown error");
+        setError(error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void fetchDocuments();
+    return undefined;
+  }, [topicId, pagination.currentPage, pagination.itemsPerPage, sort]);
+
+  const setPage = (page: number): void => {
+    setPagination((prev) => ({ ...prev, currentPage: page }));
+  };
+
+  const setItemsPerPage = (perPage: number): void => {
+    setPagination((prev) => ({ ...prev, itemsPerPage: perPage, currentPage: 1 }));
+  };
+
+  const updateSort = (newSort: DocumentsSortModel): void => {
+    setSort(newSort);
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+  };
+
+  const refetch = async () => {
+    if (!topicId) return;
+
     setIsLoading(true);
     setError(null);
 
     try {
       const queryParams = new URLSearchParams({
         topic_id: topicId,
-        sort: `${sort.sortOrder === "desc" ? "-" : ""}${sort.sortBy}`,
-        page: page.toString(),
-        per_page: perPage.toString(),
+        page: String(pagination.currentPage),
+        limit: String(pagination.itemsPerPage),
+        sort: getSortQueryParam(sort),
       });
 
       const response = await fetch(`/api/documents?${queryParams}`);
-
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Nie udało się pobrać dokumentów");
+        throw new Error(errorData.error?.message || "Failed to fetch documents");
       }
 
-      const data = await response.json();
-
-      setDocuments(
-        data.documents.map((doc: DocumentDto) => ({
-          ...doc,
-          flashcards_count: doc.flashcards?.length ?? 0,
-          isAiGenerated: !!doc.is_ai_generated,
-        }))
-      );
-
+      const data: DocumentsResponse = await response.json();
+      setDocuments(data.documents);
       setPagination((prev) => ({
         ...prev,
-        currentPage: page,
         totalItems: data.total,
-        totalPages: Math.ceil(data.total / perPage),
-        itemsPerPage: perPage,
+        totalPages: Math.ceil(data.total / pagination.itemsPerPage),
       }));
     } catch (err) {
-      setError(err instanceof Error ? err : new Error("Wystąpił nieoczekiwany błąd"));
+      const error = err instanceof Error ? err : new Error("Unknown error");
+      setError(error);
     } finally {
       setIsLoading(false);
     }
-  }, [topicId, page, perPage, sort.sortBy, sort.sortOrder]);
-
-  useEffect(() => {
-    if (topicId) {
-      void fetchDocuments();
-    }
-    return undefined;
-  }, [topicId, page, perPage, sort.sortBy, sort.sortOrder, fetchDocuments]);
-
-  const updateSort = (newSort: Partial<DocumentsSortModel>) => {
-    setSort((prev) => ({ ...prev, ...newSort }));
   };
 
   return {
@@ -102,10 +138,10 @@ export function useDocumentsList(topicId: string, options: UseDocumentsListOptio
     isLoading,
     error,
     pagination,
+    setPage,
+    setItemsPerPage,
     sort,
     updateSort,
-    setPage,
-    setPerPage,
-    refetch: fetchDocuments,
+    refetch,
   };
-}
+};

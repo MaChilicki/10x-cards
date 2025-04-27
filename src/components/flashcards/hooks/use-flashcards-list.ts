@@ -1,121 +1,125 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { FlashcardDto } from "@/types";
-import type { FlashcardsSortModel, FlashcardsListViewModel } from "../types";
+import type { FlashcardsSortModel } from "../types";
 import { logger } from "@/lib/services/logger.service";
 
-export function useFlashcardsList(documentId: string, initialSort: FlashcardsSortModel) {
-  const [state, setState] = useState<FlashcardsListViewModel>({
-    flashcards: [],
-    pagination: null,
-    isLoadingFlashcards: true,
-    flashcardsError: null,
-    currentPage: 1,
-    currentSort: initialSort,
+interface UseFlashcardsListProps {
+  documentId: string;
+  topicId?: string;
+  initialSort?: FlashcardsSortModel;
+  initialPage?: number;
+  initialItemsPerPage?: number;
+  is_approved?: boolean;
+  is_disabled?: boolean;
+}
+
+interface FlashcardsResponse {
+  data: FlashcardDto[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+}
+
+const getSortQueryParam = (sort: FlashcardsSortModel): string => {
+  const prefix = sort.sortOrder === "desc" ? "-" : "";
+  return `${prefix}${sort.sortBy}`;
+};
+
+export function useFlashcardsList({
+  documentId,
+  topicId,
+  initialSort = { sortBy: "created_at", sortOrder: "desc" },
+  initialPage = 1,
+  initialItemsPerPage = 12,
+  is_approved,
+  is_disabled,
+}: UseFlashcardsListProps) {
+  const [flashcards, setFlashcards] = useState<FlashcardDto[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [page, setPage] = useState(initialPage);
+  const [itemsPerPage, setItemsPerPage] = useState(initialItemsPerPage);
+  const [sort, setSort] = useState<FlashcardsSortModel>(initialSort);
+  const [pagination, setPagination] = useState({
+    currentPage: initialPage,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: initialItemsPerPage,
   });
 
   const fetchFlashcards = useCallback(async () => {
-    setState((prev) => ({ ...prev, isLoadingFlashcards: true, flashcardsError: null }));
     try {
+      setIsLoading(true);
+      setError(null);
+
       const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: itemsPerPage.toString(),
+        sort: getSortQueryParam(sort),
         document_id: documentId,
-        page: state.currentPage.toString(),
-        limit: (state.pagination?.limit || 24).toString(),
-        sort_by: state.currentSort.sortBy,
-        sort_order: state.currentSort.sortOrder,
-        is_approved: "true",
-        is_disabled: "false",
       });
 
-      const response = await fetch(`/api/flashcards?${queryParams}`);
-      if (!response.ok) {
-        throw new Error("Nie udało się pobrać fiszek");
+      if (topicId) {
+        queryParams.append("topic_id", topicId);
       }
 
-      const { data: flashcards, pagination } = await response.json();
-      setState((prev) => ({
-        ...prev,
-        flashcards,
-        pagination,
-        isLoadingFlashcards: false,
-      }));
-    } catch (error) {
-      setState((prev) => ({
-        ...prev,
-        isLoadingFlashcards: false,
-        flashcardsError: error instanceof Error ? error.message : "Nieznany błąd",
-      }));
-    }
-  }, [documentId, state.currentPage, state.currentSort, state.pagination?.limit]);
+      if (is_approved !== undefined) {
+        queryParams.append("is_approved", is_approved ? "true" : "false");
+      }
 
-  const setPage = (page: number) => {
-    setState((prev) => ({ ...prev, currentPage: page }));
-  };
+      if (is_disabled !== undefined) {
+        queryParams.append("is_disabled", is_disabled ? "true" : "false");
+      }
 
-  const setSort = (sort: FlashcardsSortModel) => {
-    setState((prev) => ({
-      ...prev,
-      currentSort: sort,
-      currentPage: 1, // Reset do pierwszej strony przy zmianie sortowania
-    }));
-  };
+      const queryString = queryParams.toString();
+      logger.debug(`Pobieranie fiszek z parametrami: ${queryString}`);
 
-  const setItemsPerPage = (limit: number) => {
-    setState((prev) => ({
-      ...prev,
-      pagination: prev.pagination ? { ...prev.pagination, limit } : null,
-      currentPage: 1, // Reset do pierwszej strony przy zmianie liczby elementów
-    }));
-  };
+      const response = await fetch(`/api/flashcards?${queryString}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || "Nie udało się pobrać fiszek");
+      }
 
-  const editFlashcard = async (flashcardId: string, updates: Partial<FlashcardDto>) => {
-    try {
-      const response = await fetch(`/api/flashcards/${flashcardId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updates),
+      const data: FlashcardsResponse = await response.json();
+      logger.debug(`Otrzymano ${data.data.length} fiszek z ${data.pagination.total} dostępnych`);
+
+      setFlashcards(data.data);
+      setPagination({
+        currentPage: data.pagination.page,
+        totalPages: Math.ceil(data.pagination.total / data.pagination.limit),
+        totalItems: data.pagination.total,
+        itemsPerPage: data.pagination.limit,
       });
-
-      if (!response.ok) {
-        throw new Error("Nie udało się zaktualizować fiszki");
-      }
-
-      // Odśwież listę po edycji
-      await fetchFlashcards();
-    } catch (error) {
-      logger.error("Błąd podczas aktualizacji fiszki:", error);
-      throw error;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error("Wystąpił nieoczekiwany błąd");
+      logger.error("Błąd podczas pobierania fiszek:", error);
+      setError(error);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [documentId, topicId, page, itemsPerPage, sort, is_approved, is_disabled]);
 
-  const deleteFlashcard = async (flashcardId: string) => {
-    try {
-      const response = await fetch(`/api/flashcards/${flashcardId}`, {
-        method: "DELETE",
-      });
+  useEffect(() => {
+    void fetchFlashcards();
+    return undefined;
+  }, [fetchFlashcards]);
 
-      if (!response.ok) {
-        throw new Error("Nie udało się usunąć fiszki");
-      }
-
-      // Odśwież listę po usunięciu
-      await fetchFlashcards();
-    } catch (error) {
-      logger.error("Błąd podczas usuwania fiszki:", error);
-      throw error;
-    }
+  const updateSort = (newSort: FlashcardsSortModel) => {
+    setSort(newSort);
+    setPage(1);
   };
 
   return {
-    ...state,
-    actions: {
-      setPage,
-      setSort,
-      setItemsPerPage,
-      editFlashcard,
-      deleteFlashcard,
-    },
+    flashcards,
+    isLoading,
+    error,
+    pagination,
     refetch: fetchFlashcards,
+    setPage,
+    setItemsPerPage,
+    sort,
+    updateSort,
   };
 }
