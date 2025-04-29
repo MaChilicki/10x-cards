@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useState } from "react";
 
-interface ConfirmDialogProps {
+interface DocumentEditConfirmDialogProps {
   isOpen: boolean;
   title: string;
   description: string;
@@ -20,7 +20,7 @@ interface ConfirmDialogProps {
   dangerousHTML?: boolean;
 }
 
-export function ConfirmDialog({
+export function DocumentEditConfirmDialog({
   isOpen,
   title,
   description,
@@ -28,7 +28,7 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
   dangerousHTML = false,
-}: ConfirmDialogProps) {
+}: DocumentEditConfirmDialogProps) {
   const [isConfirming, setIsConfirming] = useState(false);
 
   const handleConfirm = async () => {

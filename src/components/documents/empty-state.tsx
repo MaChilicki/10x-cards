@@ -18,7 +18,7 @@ export function EmptyState({ topicId }: EmptyStateProps) {
       <p className="text-muted-foreground mb-6">
         Ten temat nie zawiera jeszcze żadnych dokumentów. Dodaj pierwszy dokument, aby rozpocząć tworzenie fiszek.
       </p>
-      <Button onClick={() => navigate(`/topics/${topicId}/documents/new`)} className="gap-2">
+      <Button onClick={() => navigate(`/documents/new?topicId=${topicId}`)} className="gap-2">
         <Plus className="h-4 w-4" />
         Dodaj pierwszy dokument
       </Button>

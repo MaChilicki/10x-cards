@@ -1,33 +1,51 @@
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { ValidationMessage } from "@/components/ui/validation-message";
-import { CharacterCounter } from "@/components/ui/character-counter";
+import { Textarea } from "./textarea";
+import { Label } from "./label";
+import { CharacterCounter } from "./character-counter";
 
-interface ContentTextareaProps {
+export interface ContentTextareaProps {
+  id?: string;
+  name?: string;
+  label?: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   onBlur?: () => void;
   error?: string;
-  disabled?: boolean;
+  placeholder?: string;
+  minLength?: number;
+  maxLength?: number;
+  showCounter?: boolean;
 }
 
-export function ContentTextarea({ value, onChange, onBlur, error, disabled }: ContentTextareaProps) {
+export function ContentTextarea({
+  id = "content",
+  name = "content",
+  label = "Treść",
+  value,
+  onChange,
+  onBlur,
+  error,
+  placeholder = "Wprowadź treść...",
+  minLength = 0,
+  maxLength = 10000,
+  showCounter = true,
+}: ContentTextareaProps) {
   return (
     <div className="space-y-2">
-      <Label htmlFor="content">Treść dokumentu</Label>
+      <Label htmlFor={id} className="text-base">
+        {label}
+      </Label>
       <Textarea
-        id="content"
-        name="content"
+        id={id}
+        name={name}
         value={value}
         onChange={onChange}
         onBlur={onBlur}
-        disabled={disabled}
-        placeholder="Wprowadź treść dokumentu..."
-        className="min-h-[300px] resize-y"
+        className={`h-[400px] resize-none overflow-y-auto ${error ? "border-destructive" : ""}`}
+        placeholder={placeholder}
       />
-      <div className="flex flex-col gap-1">
-        <CharacterCounter count={value.length} min={1000} max={10000} />
-        {error && <ValidationMessage message={error} />}
+      <div className="space-y-1">
+        {showCounter && <CharacterCounter count={value.length} min={minLength} max={maxLength} />}
+        {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-# Plan implementacji widoku DocumentEditView
+#Plan implementacji widoku DocumentEditView
 
 ## 1. Przegląd
 DocumentEditView to widok umożliwiający tworzenie nowego dokumentu lub edycję istniejącego. Użytkownik może wprowadzić tytuł i treść dokumentu i zapisać zmiany. Widok obsługuje walidację danych, ostrzega przed utratą niezapisanych zmian oraz informuje o konsekwencjach ponownego generowania fiszek. Po zapisaniu nowego dokumentu następuje automatyczne generowanie fiszek AI i przekierowanie do widoku FlashcardsApprovalView. W przypadku edycji istniejącego dokumentu system pyta użytkownika, czy chce wygenerować nowe fiszki, z odpowiednim ostrzeżeniem o usunięciu istniejących fiszek AI.
@@ -20,7 +20,6 @@ DocumentEditView
 │   └── ValidationMessage
 ├── SubmitButtonGroup
 ├── NavigationPrompt (warunkowy)
-├── RegenerationWarningDialog (warunkowy)
 └── FlashcardsRegenerationDialog (warunkowy)
 ```
 
@@ -91,7 +90,7 @@ DocumentEditView
     onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
     onBlur?: () => void;
     error?: string;
-  }
+  } 
   ```
 
 ### CharacterCounter
@@ -155,24 +154,9 @@ DocumentEditView
   }
   ```
 
-### RegenerationWarningDialog
-- Opis komponentu: Dialog wyświetlany przy próbie ponownego generowania fiszek przez przycisk "Generuj fiszki"
-- Główne elementy: Dialog (z shadcn/ui)
-- Obsługiwane interakcje: onConfirm, onCancel
-- Obsługiwana walidacja: brak
-- Typy: funkcje callback
-- Propsy: 
-  ```typescript
-  {
-    isOpen: boolean;
-    onConfirm: () => void;
-    onCancel: () => void;
-  }
-  ```
-
 ### FlashcardsRegenerationDialog
 - Opis komponentu: Dialog wyświetlany po zapisie edytowanego dokumentu, pytający o generowanie nowych fiszek
-- Główne elementy: Dialog (z shadcn/ui), tekst ostrzeżenia o usunięciu istniejących fiszek AI (jeśli dokument ma fiszki AI)
+- Główne elementy: Dialog (z shadcn/ui), tekst ostrzeżenia o trwałym usunięciu istniejących fiszek AI (jeśli dokument ma fiszki AI)
 - Obsługiwane interakcje: onConfirm, onCancel
 - Obsługiwana walidacja: brak
 - Typy: funkcje callback
@@ -401,16 +385,25 @@ DocumentEditView korzysta z kilku endpointów API:
       - Jeśli użytkownik wybierze generowanie fiszek: przekierowanie do `/documents/{id}/flashcards/approve`
       - Jeśli użytkownik nie wybierze generowania fiszek: przekierowanie do `/documents/{id}`
 
-### 2. Generowanie fiszek
-- Endpoint: `POST /api/flashcards/ai-generate`
-- Żądanie: `FlashcardAiGenerateDto`
-- Odpowiedź: `FlashcardAiResponse`
+### 2. Ponowne Generowanie fiszek
+- Endpoint: `POST /api/flashcards/ai-regenerate`
+- Żądanie: 
+  ```typescript
+  {
+    document_id: string;
+    force_regenerate?: boolean; // opcjonalne, domyślnie false
+  }
+  ```
+- Odpowiedź: 
+  ```typescript
+  {
+    flashcards: FlashcardDto[];
+    disabled_count: number;
+  }
+  ```
 - Wywołanie: 
-  - Po kliknięciu przycisku "Generuj fiszki" i potwierdzeniu
   - Po zapisie edycji dokumentu i wyborze generowania fiszek
-- Zachowanie: endpoint usuwa wszystkie istniejące fiszki AI (zatwierdzone, niezatwierdzone i soft-deleted) poprzez hard-delete
-
-> **UWAGA: Endpoint do regeneracji fiszek nie jest jeszcze gotowy. W pierwszej wersji implementacji funkcjonalność regenerowania fiszek powinna być oznaczona jako niedostępna.**
+- Zachowanie: endpoint usuwa wszystkie istniejące fiszki AI (zatwierdzone, niezatwierdzone i soft-deleted) poprzez hard-delete i generuje nowe
 
 ## 8. Interakcje użytkownika
 1. **Wprowadzanie tytułu i treści dokumentu**
@@ -423,9 +416,9 @@ DocumentEditView korzysta z kilku endpointów API:
    - Walidacja formularza
    - Wysłanie danych do API
    - Różne zachowanie zależnie od typu operacji:
-     - Dla nowego dokumentu: automatyczne generowanie fiszek i przekierowanie do `/documents/{id}/flashcards/approve`
+     - Dla nowego dokumentu: automatyczne przekierowanie do `/documents/{id}/flashcards/approve` (logika generowania fiszek do nowego dokumentu jest zaimplementowana w endpoincie zapisu fiszki)
      - Dla edycji dokumentu: wyświetlenie dialogu z pytaniem o generowanie nowych fiszek
-       - Jeśli dokument ma już fiszki AI: dodanie ostrzeżenia o usunięciu istniejących fiszek
+       - Jeśli dokument ma już fiszki AI: dodanie ostrzeżenia o usunięciu istniejących fiszek w tym samym dialogu
        - Jeśli użytkownik potwierdzi: regeneracja fiszek i przekierowanie do `/documents/{id}/flashcards/approve`
        - Jeśli użytkownik odmówi: przekierowanie do `/documents/{id}`
 
@@ -437,13 +430,12 @@ DocumentEditView korzysta z kilku endpointów API:
      - Dla nowego dokumentu (dodawanie): powrót do widoku listy dokumentów w temacie (`/topics/{topic_id}`)
 
 4. **Generowanie fiszek**
-   - Kliknięcie przycisku "Generuj fiszki"
-   - Jeśli dokument ma już fiszki AI: wyświetlenie RegenerationWarningDialog z ostrzeżeniem o usunięciu istniejących fiszek
+   - Jeśli dokument ma już fiszki AI: wyświetlenie RegenerationWarningDialog z ostrzeżeniem o trwałym usunięciu istniejących fiszek
    - Zapisanie dokumentu (jeśli nowy lub ma niezapisane zmiany)
-   - Wywołanie API generowania fiszek, które usuwa wszystkie istniejące fiszki AI
+   - Wywołanie API regeneracji fiszek, które usuwa wszystkie istniejące fiszki AI (hard-delete) - tylko przy edycji dokumentu.
    - Przekierowanie do `/documents/{id}/flashcards/approve`
 
-> **UWAGA: Funkcjonalność regenerowania fiszek powinna być na razie zamarkowana jako niedostępna (np. przycisk wyszarzony lub ukryty), ponieważ endpoint nie jest jeszcze gotowy.**
+> **UWAGA: Funkcjonalność regenerowania fiszek jest teraz dostępna poprzez endpoint `/api/flashcards/ai-regenerate`.**
 
 5. **Nawigacja z niezapisanymi zmianami**
    - Wyświetlenie NavigationPrompt

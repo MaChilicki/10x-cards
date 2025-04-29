@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "@/lib/hooks/use-navigate";
 
 interface ConfirmDialogState {
   isOpen: boolean;
@@ -6,7 +7,9 @@ interface ConfirmDialogState {
   description: string;
   confirmText: string;
   onConfirm: () => Promise<void>;
+  onCancel?: () => void;
   dangerousHTML?: boolean;
+  redirectUrl?: string;
 }
 
 const defaultState: ConfirmDialogState = {
@@ -23,10 +26,13 @@ interface OpenDialogOptions {
   description: string;
   confirmText?: string;
   onConfirm: () => Promise<void>;
+  onCancel?: () => void;
   dangerousHTML?: boolean;
+  redirectUrl?: string;
 }
 
 export function useConfirmDialog() {
+  const navigate = useNavigate();
   const [dialogState, setDialogState] = useState<ConfirmDialogState>(defaultState);
 
   const openDialog = ({
@@ -34,7 +40,9 @@ export function useConfirmDialog() {
     description,
     confirmText = "Potwierdź",
     onConfirm,
+    onCancel,
     dangerousHTML = false,
+    redirectUrl,
   }: OpenDialogOptions) => {
     setDialogState({
       isOpen: true,
@@ -42,7 +50,9 @@ export function useConfirmDialog() {
       description,
       confirmText,
       onConfirm,
+      onCancel,
       dangerousHTML,
+      redirectUrl,
     });
   };
 
@@ -58,12 +68,25 @@ export function useConfirmDialog() {
     }
   };
 
+  const handleCancel = () => {
+    if (dialogState.redirectUrl) {
+      navigate(dialogState.redirectUrl);
+    }
+
+    if (dialogState.onCancel) {
+      dialogState.onCancel();
+    }
+
+    closeDialog();
+  };
+
   return {
     dialogState,
     actions: {
       openDialog,
       closeDialog,
       handleConfirm,
+      handleCancel,
     },
   };
 }

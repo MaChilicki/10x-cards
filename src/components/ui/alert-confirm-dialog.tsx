@@ -11,43 +11,54 @@ import {
 import { LoadingSpinner } from "./loading-spinner";
 import { cn } from "@/lib/utils";
 
-interface ConfirmationDialogProps {
+interface AlertConfirmDialogProps {
   isOpen: boolean;
   title: string;
   description: string;
   confirmText?: string;
   onConfirm: () => void | Promise<void>;
   onClose: () => void;
+  onCancel?: () => void;
   isSubmitting?: boolean;
   className?: string;
 }
 
-export function ConfirmationDialog({
+export function AlertConfirmDialog({
   isOpen,
   title,
   description,
   confirmText = "Zatwierdź",
   onConfirm,
   onClose,
+  onCancel,
   isSubmitting = false,
   className,
-}: ConfirmationDialogProps) {
+}: AlertConfirmDialogProps) {
   const handleConfirm = async () => {
     await onConfirm();
     onClose();
   };
 
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+    }
+    onClose();
+  };
+
   return (
-    <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <AlertDialog open={isOpen} onOpenChange={(open) => !open && handleCancel()}>
       <AlertDialogContent className={cn(className)}>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>
+          <AlertDialogDescription asChild>
             <div dangerouslySetInnerHTML={{ __html: description }} />
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isSubmitting}>Nie</AlertDialogCancel>
+          <AlertDialogCancel onClick={handleCancel} disabled={isSubmitting}>
+            Nie
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();

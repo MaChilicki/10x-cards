@@ -1,31 +1,23 @@
-import { cn } from "@/lib/utils";
-
-interface CharacterCounterProps {
+export interface CharacterCounterProps {
   count: number;
   min: number;
   max: number;
-  className?: string;
 }
 
-export function CharacterCounter({ count, min, max, className }: CharacterCounterProps) {
-  const isValid = count >= min && count <= max;
+export function CharacterCounter({ count, min, max }: CharacterCounterProps) {
   const isUnderMin = count < min;
   const isOverMax = count > max;
+  const getStatusColor = () => {
+    if (isUnderMin || isOverMax) return "text-destructive";
+    if (count >= min && count <= max) return "text-green-600";
+    return "text-muted-foreground";
+  };
 
   return (
-    <div className={cn("text-sm mt-2 flex items-center justify-end space-x-2", className)}>
-      <span
-        className={cn(
-          "font-medium",
-          isValid && "text-muted-foreground",
-          isUnderMin && "text-yellow-500",
-          isOverMax && "text-destructive"
-        )}
-      >
-        {count}
-      </span>
+    <div className="flex items-center justify-end space-x-2 text-sm">
+      <span className={getStatusColor()}>{count.toLocaleString()} znaków</span>
       <span className="text-muted-foreground">
-        / {min}-{max} znaków
+        (min: {min.toLocaleString()}, max: {max.toLocaleString()})
       </span>
     </div>
   );

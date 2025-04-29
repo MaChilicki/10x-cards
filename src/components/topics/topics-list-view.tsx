@@ -1,17 +1,26 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TopicFormModal } from "./topic-form-modal";
 import { DeleteTopicDialog } from "./delete-topic-dialog";
 import { TopicsList } from "./topics-list";
+import { TopicsSorter } from "./topics-sorter";
 import { useTopics } from "./hooks/use-topics";
 import type { TopicDto, TopicCreateDto } from "@/types";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useNavigate } from "@/lib/hooks/use-navigate";
+import { Pagination } from "@/components/ui/pagination";
+import type { TopicsSortModel } from "./types";
 
 export function TopicsListView() {
   const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(12);
+  const [sort, setSort] = useState<TopicsSortModel>({
+    sortBy: "name",
+    sortOrder: "asc",
+  });
+
   const { topics, loading, error, addTopic, updateTopic, deleteTopic, fetchTopics } = useTopics();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -76,8 +85,39 @@ export function TopicsListView() {
     }
   };
 
+  const handleSortChange = (newSort: TopicsSortModel) => {
+    setSort(newSort);
+    setCurrentPage(1);
+  };
+
+  const handleItemsPerPageChange = (value: number) => {
+    setItemsPerPage(value);
+    setCurrentPage(1);
+  };
+
+  const sortedTopics = [...topics].sort((a, b) => {
+    const aValue = a[sort.sortBy];
+    const bValue = b[sort.sortBy];
+
+    if (sort.sortOrder === "asc") {
+      return aValue > bValue ? 1 : -1;
+    } else {
+      return aValue < bValue ? 1 : -1;
+    }
+  });
+
+  const totalPages = Math.ceil(sortedTopics.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedTopics = sortedTopics.slice(startIndex, startIndex + itemsPerPage);
+
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <LoadingSpinner size="lg" withCard message="Ładowanie tematów..." />
+        </div>
+      </div>
+    );
   }
 
   if (error) {
@@ -86,37 +126,49 @@ export function TopicsListView() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Tematy</CardTitle>
-          <Button onClick={handleOpenAddModal}>Dodaj temat</Button>
-        </CardHeader>
-        <CardContent>
-          <TopicsList
-            topics={topics}
-            onTopicClick={handleTopicClick}
-            onEditClick={handleOpenEditModal}
-            onDeleteClick={handleOpenDeleteDialog}
-          />
-        </CardContent>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-2xl font-bold">Tematy</h1>
+      </div>
 
-        <TopicFormModal
-          isOpen={isModalOpen}
-          isEditMode={isEditMode}
-          initialData={selectedTopic}
-          onClose={handleCloseModal}
-          onSubmit={handleSubmit}
+      <div className="flex justify-between items-center mb-6">
+        <TopicsSorter
+          currentSort={sort}
+          onChange={handleSortChange}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={handleItemsPerPageChange}
         />
+        <Button onClick={handleOpenAddModal}>Dodaj temat</Button>
+      </div>
 
-        <DeleteTopicDialog
-          isOpen={isDeleteDialogOpen}
-          topic={selectedTopic}
-          deleting={false}
-          error={null}
-          onClose={handleCloseDeleteDialog}
-          onConfirm={handleDelete}
-        />
-      </Card>
+      <TopicsList
+        topics={paginatedTopics}
+        onTopicClick={handleTopicClick}
+        onEditClick={handleOpenEditModal}
+        onDeleteClick={handleOpenDeleteDialog}
+      />
+
+      {totalPages > 1 && (
+        <div className="mt-6">
+          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+        </div>
+      )}
+
+      <TopicFormModal
+        isOpen={isModalOpen}
+        isEditMode={isEditMode}
+        initialData={selectedTopic}
+        onClose={handleCloseModal}
+        onSubmit={handleSubmit}
+      />
+
+      <DeleteTopicDialog
+        isOpen={isDeleteDialogOpen}
+        topic={selectedTopic}
+        deleting={false}
+        error={null}
+        onClose={handleCloseDeleteDialog}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

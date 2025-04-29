@@ -21,7 +21,7 @@ interface TopicDetailViewProps {
 
 type PerPageValue = 12 | 24 | 36;
 
-const TopicDetailView = ({ topicId }: React.ComponentProps<"div"> & TopicDetailViewProps) => {
+const TopicDetailView = ({ topicId }: TopicDetailViewProps) => {
   const navigate = useNavigate();
   const { searchParams, setParams } = useSearchParams();
   const { topic, isLoading: isTopicLoading, error: topicError, refetch: refetchTopic } = useTopicDetail(topicId);
@@ -61,6 +61,17 @@ const TopicDetailView = ({ topicId }: React.ComponentProps<"div"> & TopicDetailV
     initialItemsPerPage,
   });
 
+  // Obsługa nawigacji wstecz
+  useEffect(() => {
+    const handlePopState = () => {
+      refetchTopic();
+      refetchDocuments();
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [refetchTopic, refetchDocuments]);
+
   const [documentToDelete, setDocumentToDelete] = useState<DocumentViewModel | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<Error | null>(null);
@@ -89,7 +100,12 @@ const TopicDetailView = ({ topicId }: React.ComponentProps<"div"> & TopicDetailV
   };
 
   const handleAddDocument = (): void => {
-    navigate(`/topics/${topicId}/documents/new`);
+    if (!topic) return;
+    navigate(`/documents/new?topicId=${topic.id}&topicTitle=${encodeURIComponent(topic.name)}`);
+  };
+
+  const handleEditDocument = (document: DocumentViewModel): void => {
+    navigate(`/documents/${document.id}/edit`);
   };
 
   const handleDeleteDocument = (document: DocumentViewModel): void => {
@@ -136,7 +152,13 @@ const TopicDetailView = ({ topicId }: React.ComponentProps<"div"> & TopicDetailV
   }
 
   if (isTopicLoading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <LoadingSpinner size="lg" withCard message="Ładowanie tematu..." />
+        </div>
+      </div>
+    );
   }
 
   if (!topic) {
@@ -150,6 +172,16 @@ const TopicDetailView = ({ topicId }: React.ComponentProps<"div"> & TopicDetailV
         <Button variant="outline" onClick={refetchDocuments}>
           Spróbuj ponownie
         </Button>
+      </div>
+    );
+  }
+
+  if (isDocumentsLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <LoadingSpinner size="lg" withCard message="Ładowanie dokumentów..." />
+        </div>
       </div>
     );
   }
@@ -174,6 +206,7 @@ const TopicDetailView = ({ topicId }: React.ComponentProps<"div"> & TopicDetailV
                 availablePerPage: [12, 24, 36],
               }}
               onDelete={handleDeleteDocument}
+              onEdit={handleEditDocument}
               onSort={handleSort}
               sort={sort}
               onAddDocument={handleAddDocument}

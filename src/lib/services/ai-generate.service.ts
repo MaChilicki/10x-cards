@@ -10,12 +10,40 @@ import { logger } from "./logger.service";
 import { FlashcardsService } from "./flashcards.service";
 import { flashcardAiRegenerateSchema } from "../schemas/ai-regenerate.schema";
 import { z } from "zod";
+import { OpenRouterService } from "./openrouter.service";
+import fs from "fs";
+import path from "path";
+
+interface AiFlashcard {
+  front_original: string;
+  back_original: string;
+}
 
 export class AiGenerateService {
   private flashcardsService: FlashcardsService;
+  private openRouterService: OpenRouterService;
+  private readonly systemPrompt: string;
 
   constructor(private supabase: SupabaseClient) {
     this.flashcardsService = new FlashcardsService(supabase);
+    const apiKey = import.meta.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      throw new Error("OPENROUTER_API_KEY is not defined");
+    }
+    this.openRouterService = new OpenRouterService({
+      apiKey,
+      baseUrl: import.meta.env.OPENROUTER_BASE_URL,
+      defaultModel: import.meta.env.OPENROUTER_DEFAULT_MODEL,
+    });
+
+    // Wczytanie promptu systemowego z pliku
+    const promptPath = path.join(process.cwd(), "src/lib/prompts/generate-flashcards.md");
+    try {
+      this.systemPrompt = fs.readFileSync(promptPath, "utf-8");
+    } catch (error) {
+      logger.error("Nie udało się wczytać promptu systemowego", error);
+      throw new Error("Nie udało się wczytać promptu systemowego");
+    }
   }
 
   private async saveFlashcards(flashcards: FlashcardProposalDto[]): Promise<void> {
@@ -38,94 +66,111 @@ export class AiGenerateService {
   }
 
   async generateFlashcards(data: FlashcardAiGenerateDto): Promise<FlashcardAiResponse> {
-    try {
-      logger.debug(`Rozpoczęto generowanie fiszek${data.document_id ? ` dla dokumentu ${data.document_id}` : ""}`);
+    const MAX_RETRIES = 5;
+    const INITIAL_DELAY = 1000; // 1 sekunda
+    const MAX_DELAY = 10000; // 10 sekund
 
-      // TODO: Implementacja integracji z modelem AI
-      // Na tym etapie zwracamy mock odpowiedzi
-      const mockFlashcards: FlashcardProposalDto[] = [
-        {
-          front_original: "Co to jest TypeScript?",
-          back_original:
-            "TypeScript to typowany nadzbiór JavaScript, który kompiluje się do czystego JavaScript. Dodaje opcjonalne typy, klasy i moduły do JavaScript.",
-          topic_id: data.topic_id,
-          document_id: data.document_id,
-          source: "ai",
-          is_approved: false,
-        },
-        {
-          front_original: "Jakie są główne zalety TypeScript?",
-          back_original:
-            "Główne zalety TypeScript to: statyczne typowanie, wsparcie dla nowoczesnych funkcji JavaScript, lepsze wsparcie IDE, wykrywanie błędów podczas kompilacji, łatwiejsze refaktorowanie kodu.",
-          topic_id: data.topic_id,
-          document_id: data.document_id,
-          source: "ai",
-          is_approved: false,
-        },
-        {
-          front_original: "Czym jest interfejs w TypeScript?",
-          back_original:
-            "Interfejs w TypeScript to kontrakt, który definiuje strukturę obiektu. Określa nazwy właściwości, ich typy oraz opcjonalność. Służy do definiowania kształtu danych i typów złożonych.",
-          topic_id: data.topic_id,
-          document_id: data.document_id,
-          source: "ai",
-          is_approved: false,
-        },
-        {
-          front_original: "Co to jest type inference w TypeScript?",
-          back_original:
-            "Type inference to mechanizm automatycznego wnioskowania typów przez TypeScript na podstawie przypisanych wartości i kontekstu użycia. Redukuje potrzebę jawnego deklarowania typów.",
-          topic_id: data.topic_id,
-          document_id: data.document_id,
-          source: "ai",
-          is_approved: false,
-        },
-        {
-          front_original: "Jak działa dziedziczenie w TypeScript?",
-          back_original:
-            "Dziedziczenie w TypeScript realizowane jest przez słowo kluczowe extends. Klasa pochodna dziedziczy właściwości i metody klasy bazowej, może je nadpisywać i dodawać własne.",
-          topic_id: data.topic_id,
-          document_id: data.document_id,
-          source: "ai",
-          is_approved: false,
-        },
-      ];
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        logger.debug(
+          `Próba generowania fiszek (próba ${attempt + 1}/${MAX_RETRIES})${data.document_id ? ` dla dokumentu ${data.document_id}` : ""}`
+        );
 
-      // Walidacja długości pól fiszek i skracanie jeśli potrzeba
-      const validatedFlashcards = mockFlashcards.map((flashcard) => {
-        // Walidacja długości front_original (max 200 znaków)
-        if (flashcard.front_original.length > 200) {
-          logger.warn(`Skrócono przód fiszki z ${flashcard.front_original.length} do 200 znaków`);
-          flashcard.front_original = flashcard.front_original.substring(0, 197) + "...";
+        const response = await this.openRouterService.chat(this.systemPrompt, data.text, {
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "flashcards_response",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  flashcards: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        front_original: { type: "string" },
+                        back_original: { type: "string" },
+                      },
+                      required: ["front_original", "back_original"],
+                      additionalProperties: false,
+                    },
+                  },
+                },
+                required: ["flashcards"],
+                additionalProperties: false,
+              },
+            },
+          },
+        });
+
+        const aiFlashcards = JSON.parse(response.choices[0].message.content).flashcards as AiFlashcard[];
+
+        // Walidacja odpowiedzi
+        if (!Array.isArray(aiFlashcards) || aiFlashcards.length === 0) {
+          throw new Error("Otrzymano nieprawidłową odpowiedź - brak fiszek w odpowiedzi");
         }
 
-        // Walidacja długości back_original (max 500 znaków)
-        if (flashcard.back_original.length > 500) {
-          logger.warn(`Skrócono tył fiszki z ${flashcard.back_original.length} do 500 znaków`);
-          flashcard.back_original = flashcard.back_original.substring(0, 497) + "...";
+        const flashcards: FlashcardProposalDto[] = aiFlashcards.map((flashcard) => ({
+          front_original: flashcard.front_original,
+          back_original: flashcard.back_original,
+          topic_id: data.topic_id,
+          document_id: data.document_id,
+          source: "ai",
+          is_approved: false,
+        }));
+
+        // Walidacja długości pól fiszek i skracanie jeśli potrzeba
+        const validatedFlashcards = flashcards.map((flashcard) => {
+          if (flashcard.front_original.length > 200) {
+            logger.warn(`Skrócono przód fiszki z ${flashcard.front_original.length} do 200 znaków`);
+            flashcard.front_original = flashcard.front_original.substring(0, 197) + "...";
+          }
+
+          if (flashcard.back_original.length > 500) {
+            logger.warn(`Skrócono tył fiszki z ${flashcard.back_original.length} do 500 znaków`);
+            flashcard.back_original = flashcard.back_original.substring(0, 497) + "...";
+          }
+
+          return flashcard;
+        });
+
+        logger.debug(
+          `Wygenerowano ${validatedFlashcards.length} fiszek${data.document_id ? ` dla dokumentu ${data.document_id}` : ""}`
+        );
+
+        await this.saveFlashcards(validatedFlashcards);
+
+        return {
+          flashcards: validatedFlashcards,
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Nieznany błąd";
+
+        // Jeśli to ostatnia próba, rzuć błąd
+        if (attempt === MAX_RETRIES - 1) {
+          logger.error(
+            `Ostatnia próba generowania fiszek nie powiodła się${data.document_id ? ` dla dokumentu ${data.document_id}` : ""}: ${errorMessage}`,
+            error
+          );
+          throw new Error(`Nie udało się wygenerować fiszek po ${MAX_RETRIES} próbach: ${errorMessage}`);
         }
 
-        return flashcard;
-      });
+        // Oblicz opóźnienie z exponential backoff i jitter
+        const delay = Math.min(INITIAL_DELAY * Math.pow(2, attempt) + Math.random() * 1000, MAX_DELAY);
 
-      logger.debug(
-        `Wygenerowano ${validatedFlashcards.length} fiszek${data.document_id ? ` dla dokumentu ${data.document_id}` : ""}`
-      );
+        logger.warn(
+          `Próba ${attempt + 1}/${MAX_RETRIES} nie powiodła się. Ponowna próba za ${Math.round(delay / 1000)} sekund. Błąd: ${errorMessage}`
+        );
 
-      // Zapisz wygenerowane fiszki w bazie danych
-      await this.saveFlashcards(validatedFlashcards);
-
-      return {
-        flashcards: validatedFlashcards,
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Nieznany błąd";
-      logger.error(
-        `Błąd podczas generowania fiszek${data.document_id ? ` dla dokumentu ${data.document_id}` : ""}: ${errorMessage}`,
-        error
-      );
-      throw new Error(`Nie udało się wygenerować fiszek: ${errorMessage}`);
+        // Poczekaj przed następną próbą
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
     }
+
+    // Ta linia nie powinna być nigdy osiągnięta, ale TypeScript wymaga zwrócenia wartości
+    throw new Error("Nie udało się wygenerować fiszek");
   }
 
   async regenerateFlashcards(data: z.infer<typeof flashcardAiRegenerateSchema>): Promise<AiRegenerateResponseDto> {

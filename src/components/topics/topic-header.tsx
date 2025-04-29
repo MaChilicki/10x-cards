@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
 import type { TopicDto } from "@/types";
+import { pluralizeDocument, pluralizeFlashcard } from "@/lib/utils/pluralize";
 
 interface TopicHeaderProps {
   /** Temat do wyświetlenia */
@@ -17,7 +18,7 @@ interface TopicHeaderProps {
   onBack: () => void;
 }
 
-export const TopicHeader = ({ topic, onBack }: React.ComponentProps<"header"> & TopicHeaderProps) => {
+export const TopicHeader = ({ topic, onBack }: TopicHeaderProps) => {
   return (
     <header className="space-y-4 pb-4 border-b">
       <div className="flex items-center gap-4">
@@ -51,9 +52,13 @@ export const TopicHeader = ({ topic, onBack }: React.ComponentProps<"header"> & 
         <h1 className="text-2xl font-bold tracking-tight">{topic.name}</h1>
         {topic.description && <p className="text-muted-foreground">{topic.description}</p>}
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>{topic.documents_count} dokumentów</span>
+          <span>
+            {topic.documents_count} {pluralizeDocument(topic.documents_count)}
+          </span>
           <span>•</span>
-          <span>{topic.flashcards_count} fiszek</span>
+          <span>
+            {topic.flashcards_count} {pluralizeFlashcard(topic.flashcards_count)}
+          </span>
         </div>
       </div>
     </header>

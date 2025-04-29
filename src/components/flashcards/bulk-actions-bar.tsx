@@ -2,7 +2,7 @@ import React from "react";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ConfirmationDialog } from "../ui/confirmation-dialog";
+import { AlertConfirmDialog } from "../ui/alert-confirm-dialog";
 import { cn } from "@/lib/utils";
 import type { FlashcardDto } from "@/types";
 
@@ -115,7 +115,7 @@ export function BulkActionsBar({
         </Button>
       </div>
 
-      <ConfirmationDialog
+      <AlertConfirmDialog
         isOpen={isConfirmDialogOpen}
         onClose={() => setIsConfirmDialogOpen(false)}
         title="Zatwierdzanie fiszek"

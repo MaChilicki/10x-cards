@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronLeft } from "lucide-react";
 import { DocumentActions } from "./document-actions";
 import type { DocumentDto } from "@/types";
+import { pluralizeFlashcard } from "@/lib/utils/pluralize";
 
 interface BreadcrumbItem {
   id: string;
@@ -129,10 +130,16 @@ export function DocumentHeader({
 
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">Fiszki:</span>
-        <Badge className="bg-sky-700 hover:bg-sky-800">AI: {aiFlashcardsCount}</Badge>
-        <Badge className="bg-red-700 hover:bg-red-800">Własne: {manualFlashcardsCount}</Badge>
+        <Badge className="bg-sky-700 hover:bg-sky-800 cursor-default">
+          AI: {aiFlashcardsCount} {pluralizeFlashcard(aiFlashcardsCount)}
+        </Badge>
+        <Badge className="bg-red-700 hover:bg-red-800 cursor-default">
+          Własne: {manualFlashcardsCount} {pluralizeFlashcard(manualFlashcardsCount)}
+        </Badge>
         {unapprovedCount > 0 && (
-          <Badge className="bg-lime-600 hover:bg-lime-700">Do zatwierdzenia: {unapprovedCount}</Badge>
+          <Badge className="bg-lime-600 hover:bg-lime-700 cursor-default">
+            Do zatwierdzenia: {unapprovedCount} {pluralizeFlashcard(unapprovedCount)}
+          </Badge>
         )}
       </div>
     </header>

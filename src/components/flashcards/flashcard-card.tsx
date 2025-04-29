@@ -188,8 +188,14 @@ export function FlashcardCard({
               </div>
             )}
             <div className="mt-2 text-xs text-muted-foreground pt-2">
-              <div>Utworzono: {new Date(flashcard.created_at).toLocaleDateString()}</div>
-              <div>Zaktualizowano: {new Date(flashcard.updated_at).toLocaleDateString()}</div>
+              <div>
+                Utworzono: {new Date(flashcard.created_at).toLocaleDateString()}{" "}
+                {new Date(flashcard.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </div>
+              <div>
+                Zaktualizowano: {new Date(flashcard.updated_at).toLocaleDateString()}{" "}
+                {new Date(flashcard.updated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type { FlashcardDto } from "@/types";
 import type { FlashcardsSortModel } from "../types";
-import { logger } from "@/lib/services/logger.service";
 
 interface UseFlashcardsListProps {
   documentId: string;
@@ -50,52 +49,34 @@ export function useFlashcardsList({
   });
 
   const fetchFlashcards = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
     try {
-      setIsLoading(true);
-      setError(null);
-
       const queryParams = new URLSearchParams({
         page: page.toString(),
         limit: itemsPerPage.toString(),
         sort: getSortQueryParam(sort),
         document_id: documentId,
+        ...(topicId && { topic_id: topicId }),
+        ...(is_approved !== undefined && { is_approved: is_approved.toString() }),
+        ...(is_disabled !== undefined && { is_disabled: is_disabled.toString() }),
       });
-
-      if (topicId) {
-        queryParams.append("topic_id", topicId);
-      }
-
-      if (is_approved !== undefined) {
-        queryParams.append("is_approved", is_approved ? "true" : "false");
-      }
-
-      if (is_disabled !== undefined) {
-        queryParams.append("is_disabled", is_disabled ? "true" : "false");
-      }
 
       const queryString = queryParams.toString();
-      logger.debug(`Pobieranie fiszek z parametrami: ${queryString}`);
-
       const response = await fetch(`/api/flashcards?${queryString}`);
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Nie udało się pobrać fiszek");
+        throw new Error("Nie udało się pobrać fiszek");
       }
-
       const data: FlashcardsResponse = await response.json();
-      logger.debug(`Otrzymano ${data.data.length} fiszek z ${data.pagination.total} dostępnych`);
-
       setFlashcards(data.data);
       setPagination({
-        currentPage: data.pagination.page,
-        totalPages: Math.ceil(data.pagination.total / data.pagination.limit),
+        currentPage: page,
+        totalPages: Math.ceil(data.pagination.total / itemsPerPage),
         totalItems: data.pagination.total,
-        itemsPerPage: data.pagination.limit,
+        itemsPerPage,
       });
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error("Wystąpił nieoczekiwany błąd");
-      logger.error("Błąd podczas pobierania fiszek:", error);
-      setError(error);
+    } catch (error) {
+      setError(error instanceof Error ? error : new Error("Nieznany błąd"));
     } finally {
       setIsLoading(false);
     }

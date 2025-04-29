@@ -1,31 +1,46 @@
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ValidationMessage } from "@/components/ui/validation-message";
+import { Input } from "./input";
+import { Label } from "./label";
 
-interface TitleInputProps {
+export interface TitleInputProps {
+  id?: string;
+  name?: string;
+  label?: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: () => void;
   error?: string;
-  disabled?: boolean;
+  placeholder?: string;
+  maxLength?: number;
 }
 
-export function TitleInput({ value, onChange, onBlur, error, disabled }: TitleInputProps) {
+export function TitleInput({
+  id = "title",
+  name = "title",
+  label = "Tytuł",
+  value,
+  onChange,
+  onBlur,
+  error,
+  placeholder = "Wprowadź tytuł...",
+  maxLength = 100,
+}: TitleInputProps) {
   return (
     <div className="space-y-2">
-      <Label htmlFor="name">Tytuł dokumentu</Label>
+      <Label htmlFor={id} className="text-base">
+        {label}
+      </Label>
       <Input
         type="text"
-        id="name"
-        name="name"
+        id={id}
+        name={name}
         value={value}
         onChange={onChange}
         onBlur={onBlur}
-        disabled={disabled}
-        placeholder="Wprowadź tytuł dokumentu..."
-        className="w-full"
+        className={error ? "border-destructive" : ""}
+        placeholder={placeholder}
+        maxLength={maxLength}
       />
-      {error && <ValidationMessage message={error} />}
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }

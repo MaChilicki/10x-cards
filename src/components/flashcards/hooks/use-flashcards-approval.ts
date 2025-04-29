@@ -19,6 +19,7 @@ interface UseFlashcardsApprovalState {
   flashcards: FlashcardDto[];
   isLoadingFlashcards: boolean;
   flashcardsError: Error | null;
+  totalUnapprovedCount: number;
 
   // Stan paginacji
   pagination: {
@@ -62,6 +63,7 @@ const initialState: UseFlashcardsApprovalState = {
   flashcards: [],
   isLoadingFlashcards: true,
   flashcardsError: null,
+  totalUnapprovedCount: 0,
   pagination: {
     currentPage: 1,
     totalPages: 0,
@@ -179,6 +181,7 @@ export function useFlashcardsApproval(documentId: string) {
         source: "ai",
         is_approved: "false",
         is_disabled: "false",
+        limit: "1000",
       });
 
       const response = await fetch(`/api/flashcards?${params.toString()}`);
@@ -187,6 +190,12 @@ export function useFlashcardsApproval(documentId: string) {
       }
 
       const data: FlashcardsListResponseDto = await response.json();
+
+      // Aktualizujemy stan z całkowitą liczbą niezatwierdzonych fiszek
+      setState((prev) => ({
+        ...prev,
+        totalUnapprovedCount: data.pagination.total,
+      }));
 
       // Jeśli nie ma już niezatwierdzonych fiszek, przekieruj do widoku dokumentu
       if (data.pagination.total === 0) {

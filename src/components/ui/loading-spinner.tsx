@@ -1,9 +1,13 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
+import { Card } from "./card";
 
 export interface LoadingSpinnerProps extends React.ComponentPropsWithoutRef<"div"> {
   size?: "sm" | "default" | "lg";
+  variant?: "default" | "primary";
+  withCard?: boolean;
+  message?: string;
 }
 
 const sizeClasses = {
@@ -12,11 +16,31 @@ const sizeClasses = {
   lg: "h-8 w-8",
 } as const;
 
-export function LoadingSpinner({ className, size = "default", ...props }: LoadingSpinnerProps) {
-  return (
-    <div role="status" className={cn("flex justify-center items-center", className)} {...props}>
-      <Loader2 className={cn("animate-spin text-muted-foreground", sizeClasses[size])} />
-      <span className="sr-only">Ładowanie...</span>
+const variantClasses = {
+  default: "text-muted-foreground",
+  primary: "text-primary",
+} as const;
+
+export function LoadingSpinner({
+  className,
+  size = "default",
+  variant = "default",
+  withCard = false,
+  message = "Ładowanie...",
+  ...props
+}: LoadingSpinnerProps) {
+  const spinner = (
+    <div role="status" className={cn("flex flex-col items-center gap-2", "animate-pulse", className)} {...props}>
+      <div className="relative">
+        <div className={cn("absolute inset-0 rounded-full", "bg-current opacity-20", "animate-ping")} />
+        <Loader2 className={cn("animate-spin", sizeClasses[size], variantClasses[variant], "relative")} />
+      </div>
+      {message && <div className="text-sm text-muted-foreground">{message}</div>}
+      <span className="sr-only">{message}</span>
     </div>
   );
+
+  if (!withCard) return spinner;
+
+  return <Card className="p-4">{spinner}</Card>;
 }

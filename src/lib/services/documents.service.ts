@@ -108,13 +108,27 @@ export class DocumentsService {
         logger.error("Błąd podczas pobierania statystyk fiszek manual:", manualError);
       }
 
+      // Zapytanie o niezatwierdzone fiszki
+      const { data: unapprovedFlashcards, error: unapprovedError } = await this.supabase
+        .from("flashcards")
+        .select("document_id, id")
+        .in("document_id", documentIds)
+        .eq("is_disabled", false)
+        .eq("is_approved", false);
+
+      if (unapprovedError) {
+        logger.error("Błąd podczas pobierania statystyk niezatwierdzonych fiszek:", unapprovedError);
+      }
+
       // Przygotowanie map z liczbą fiszek dla każdego dokumentu
       const aiFlashcardsCountMap = new Map<string, number>();
       const manualFlashcardsCountMap = new Map<string, number>();
+      const unapprovedFlashcardsCountMap = new Map<string, number>();
 
       documentIds.forEach((id) => {
         aiFlashcardsCountMap.set(id, 0);
         manualFlashcardsCountMap.set(id, 0);
+        unapprovedFlashcardsCountMap.set(id, 0);
       });
 
       if (aiFlashcards) {
@@ -135,15 +149,26 @@ export class DocumentsService {
         });
       }
 
+      if (unapprovedFlashcards) {
+        unapprovedFlashcards.forEach((flashcard) => {
+          const docId = flashcard.document_id;
+          if (docId) {
+            unapprovedFlashcardsCountMap.set(docId, (unapprovedFlashcardsCountMap.get(docId) || 0) + 1);
+          }
+        });
+      }
+
       // Przygotowanie dokumentów z danymi statystycznymi
       const documentsWithStats = documents.map((doc) => {
         const aiCount = aiFlashcardsCountMap.get(doc.id) || 0;
         const manualCount = manualFlashcardsCountMap.get(doc.id) || 0;
+        const unapprovedCount = unapprovedFlashcardsCountMap.get(doc.id) || 0;
 
         return {
           ...doc,
           ai_flashcards_count: aiCount,
           manual_flashcards_count: manualCount,
+          unapproved_flashcards_count: unapprovedCount,
           total_flashcards_count: aiCount + manualCount,
         };
       });

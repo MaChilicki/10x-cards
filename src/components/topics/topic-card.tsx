@@ -1,8 +1,10 @@
 import type { TopicDto } from "@/types";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash, FileText, FileStack, FolderClosed } from "lucide-react";
+import { Edit, Trash2, FolderClosed } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface TopicCardProps {
   topic: TopicDto;
@@ -13,87 +15,77 @@ interface TopicCardProps {
 
 export function TopicCard({ topic, onTopicClick, onEditClick, onDeleteClick }: TopicCardProps) {
   return (
-    <Card className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02]">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => onTopicClick(topic)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            onTopicClick(topic);
-          }
-        }}
-        className="outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary rounded-lg"
-      >
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center">
-              <FolderClosed className="h-5 w-5 mr-2 text-muted-foreground" />
-              <span>{topic.name}</span>
-            </div>
-            <div className="flex items-center space-x-2 text-muted-foreground text-sm">
-              {topic.documents_count > 0 && (
-                <div className="flex items-center">
-                  <FileText className="h-4 w-4 mr-1" />
-                  <span>{topic.documents_count}</span>
-                </div>
-              )}
-              {topic.flashcards_count > 0 && (
-                <div className="flex items-center">
-                  <FileStack className="h-4 w-4 mr-1" />
-                  <span>{topic.flashcards_count}</span>
-                </div>
-              )}
-            </div>
-          </CardTitle>
-          {topic.description && <CardDescription className="line-clamp-2">{topic.description}</CardDescription>}
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-end space-x-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditClick(topic);
-                    }}
-                    aria-label={`Edytuj temat ${topic.name}`}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Edytuj temat</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+    <Card className="cursor-pointer hover:bg-accent/5">
+      <CardHeader className="relative">
+        <div className="absolute right-6 top-6 flex gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditClick(topic);
+                  }}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Edytuj temat</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteClick(topic);
-                    }}
-                    aria-label={`Usuń temat ${topic.name}`}
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Usuń temat</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteClick(topic);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Usuń temat</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        <CardTitle className="cursor-pointer hover:underline" onClick={() => onTopicClick(topic)}>
+          <div className="flex items-center gap-2">
+            <FolderClosed className="h-4 w-4 text-muted-foreground" />
+            {topic.name}
           </div>
-        </CardContent>
-      </div>
+        </CardTitle>
+        {topic.description && <div className="text-sm text-muted-foreground line-clamp-2">{topic.description}</div>}
+      </CardHeader>
+      <CardContent>
+        <div className="text-sm text-muted-foreground">
+          <div className="flex flex-col space-y-2">
+            <div className="flex items-center gap-2">
+              <Badge className={cn("text-white bg-sky-700 hover:bg-sky-800")}>Dokumenty: {topic.documents_count}</Badge>
+              <Badge className={cn("text-white bg-red-700 hover:bg-red-800")}>Fiszki: {topic.flashcards_count}</Badge>
+            </div>
+            <div className="text-xs">
+              <div>
+                Utworzono: {new Date(topic.created_at).toLocaleDateString()}{" "}
+                {new Date(topic.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </div>
+              <div>
+                Zaktualizowano: {new Date(topic.updated_at).toLocaleDateString()}{" "}
+                {new Date(topic.updated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
     </Card>
   );
 }

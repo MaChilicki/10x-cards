@@ -5,7 +5,7 @@ import { BulkActionsBar } from "@/components/flashcards/bulk-actions-bar";
 import { FlashcardsSorter } from "./flashcards-sorter";
 import { FlashcardsList } from "./flashcards-list";
 import { EditFlashcardModal } from "./flashcard-edit-modal";
-import { ConfirmationDialog } from "../ui/confirmation-dialog";
+import { AlertConfirmDialog } from "../ui/alert-confirm-dialog";
 import { LoadingSpinner } from "../ui/loading-spinner";
 import { ErrorAlert } from "../ui/error-alert";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -60,9 +60,10 @@ export function FlashcardsApprovalView({ documentId }: FlashcardsApprovalViewPro
   // Obsługa stanu ładowania dokumentu
   if (isLoadingDocument) {
     return (
-      <div className="flex flex-col items-center justify-center p-8">
-        <LoadingSpinner size="lg" />
-        <p className="mt-4 text-sm text-muted-foreground">Ładowanie dokumentu...</p>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <LoadingSpinner size="lg" withCard message="Ładowanie dokumentu..." />
+        </div>
       </div>
     );
   }
@@ -174,25 +175,25 @@ export function FlashcardsApprovalView({ documentId }: FlashcardsApprovalViewPro
             });
           }}
         />
+
+        <EditFlashcardModal
+          isOpen={editModalState.isOpen}
+          onClose={actions.handleCloseEdit}
+          onSubmit={(data) => actions.handleSaveEdit(editModalState.flashcard?.id || "", data)}
+          flashcard={editModalState.flashcard}
+          isSubmitting={editModalState.isSubmitting}
+          mode="edit"
+        />
+
+        <AlertConfirmDialog
+          isOpen={confirmDialogState.isOpen}
+          title={confirmDialogState.title}
+          description={confirmDialogState.description}
+          confirmText={confirmDialogState.confirmText}
+          onConfirm={confirmDialogState.onConfirm ?? (() => Promise.resolve())}
+          onClose={actions.closeConfirmDialog}
+        />
       </div>
-
-      <EditFlashcardModal
-        isOpen={editModalState.isOpen}
-        onClose={actions.handleCloseEdit}
-        onSubmit={(data) => actions.handleSaveEdit(editModalState.flashcard?.id || "", data)}
-        flashcard={editModalState.flashcard}
-        isSubmitting={editModalState.isSubmitting}
-        mode="edit"
-      />
-
-      <ConfirmationDialog
-        isOpen={confirmDialogState.isOpen}
-        title={confirmDialogState.title}
-        description={confirmDialogState.description}
-        confirmText={confirmDialogState.confirmText}
-        onConfirm={confirmDialogState.onConfirm ?? (() => Promise.resolve())}
-        onClose={actions.closeConfirmDialog}
-      />
     </div>
   );
 }
