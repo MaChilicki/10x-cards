@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { FileText, Plus } from "lucide-react";
-import { useNavigate } from "@/lib/hooks/use-navigate";
+import { useNavigate } from "@/components/hooks/use-navigate";
 
 interface EmptyStateProps {
   topicId: string;

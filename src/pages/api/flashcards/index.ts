@@ -1,23 +1,23 @@
 import type { APIRoute } from "astro";
 import { FlashcardsService } from "../../../lib/services/flashcards.service";
-import { flashcardsQuerySchema, flashcardsCreateCommandSchema } from "../../../lib/schemas/flashcards.schema";
+import { flashcardsQuerySchema } from "../../../lib/schemas/flashcards.schema";
 import { logger } from "../../../lib/services/logger.service";
-import { supabaseClient } from "../../../db/supabase.client";
+import { checkAuthorization } from "../../../lib/services/auth.service";
+import type { FlashcardCreateDto } from "@/types";
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ url, locals }): Promise<Response> => {
   try {
-    // Pobranie i walidacja parametrów zapytania
-    const url = new URL(request.url);
-    const queryParams = Object.fromEntries(url.searchParams.entries());
+    const authCheck = checkAuthorization(locals);
+    if (!authCheck.authorized || !authCheck.userId) {
+      return authCheck.response as Response;
+    }
 
-    logger.debug(`Otrzymane parametry zapytania: ${JSON.stringify(queryParams)}`);
-
-    const validationResult = flashcardsQuerySchema.safeParse(queryParams);
+    const searchParams = Object.fromEntries(url.searchParams);
+    const validationResult = flashcardsQuerySchema.safeParse(searchParams);
 
     if (!validationResult.success) {
-      logger.error(`Błąd walidacji parametrów: ${JSON.stringify(validationResult.error.format())}`);
       return new Response(
         JSON.stringify({
           error: {
@@ -28,120 +28,161 @@ export const GET: APIRoute = async ({ request }) => {
         }),
         {
           status: 400,
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
         }
       );
     }
 
-    logger.debug(`Zwalidowane parametry: ${JSON.stringify(validationResult.data)}`);
+    const flashcardsService = new FlashcardsService(locals.supabase, authCheck.userId);
 
-    // Utworzenie serwisu i pobranie danych
-    const flashcardsService = new FlashcardsService(supabaseClient);
-    const response = await flashcardsService.getFlashcards(validationResult.data);
+    try {
+      const flashcards = await flashcardsService.getFlashcards(validationResult.data);
 
-    return new Response(JSON.stringify(response), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+      return new Response(JSON.stringify(flashcards), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      logger.error("Błąd podczas pobierania listy fiszek:", error);
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Wystąpił błąd podczas pobierania listy fiszek",
+            details: error instanceof Error ? error.message : "Nieznany błąd",
+          },
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
   } catch (error) {
-    logger.error("Błąd podczas pobierania fiszek:", error);
-
+    logger.error("Nieoczekiwany błąd podczas przetwarzania żądania GET:", error);
     return new Response(
       JSON.stringify({
         error: {
           code: "INTERNAL_SERVER_ERROR",
-          message: "Wystąpił błąd podczas przetwarzania żądania",
+          message: "Wystąpił nieoczekiwany błąd",
           details: error instanceof Error ? error.message : "Nieznany błąd",
         },
       }),
       {
         status: 500,
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       }
     );
   }
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }): Promise<Response> => {
   try {
-    // Pobranie i walidacja ciała żądania
-    const body = await request.json();
-    const validationResult = flashcardsCreateCommandSchema.safeParse(body);
+    const authCheck = checkAuthorization(locals);
+    if (!authCheck.authorized || !authCheck.userId) {
+      return authCheck.response as Response;
+    }
 
-    if (!validationResult.success) {
+    const contentType = request.headers.get("Content-Type");
+    if (!contentType?.includes("application/json")) {
       return new Response(
         JSON.stringify({
           error: {
-            code: "VALIDATION_ERROR",
-            message: "Nieprawidłowe dane wejściowe",
-            details: validationResult.error.format(),
+            code: "INVALID_CONTENT_TYPE",
+            message: "Nieprawidłowy format danych",
+            details: "Wymagany Content-Type: application/json",
           },
         }),
         {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json",
-          },
+          status: 415,
+          headers: { "Content-Type": "application/json" },
         }
       );
     }
 
-    // Sprawdzenie czy wszystkie fiszki mają source="manual"
-    const hasNonManualSource = validationResult.data.flashcards.some((flashcard) => flashcard.source !== "manual");
-    if (hasNonManualSource) {
+    let body: FlashcardCreateDto;
+    try {
+      body = await request.json();
+    } catch {
       return new Response(
         JSON.stringify({
           error: {
-            code: "INVALID_SOURCE",
-            message: "Ten endpoint obsługuje tylko fiszki typu manual",
+            code: "INVALID_JSON",
+            message: "Nieprawidłowy format JSON",
+            details: "Nie można sparsować body requestu",
           },
         }),
         {
           status: 400,
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
         }
       );
     }
 
-    // Utworzenie serwisu i zapisanie fiszek
-    const flashcardsService = new FlashcardsService(supabaseClient);
-    await flashcardsService.createFlashcards(validationResult.data.flashcards);
+    const { document_id, topic_id, front_original, back_original } = body;
+    if (!document_id || !topic_id || !front_original || !back_original) {
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "MISSING_PARAMETER",
+            message: "Brak wymaganych parametrów",
+            details: "document_id, topic_id, front_original i back_original są wymagane",
+          },
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
 
-    return new Response(
-      JSON.stringify({
-        message: "Fiszki zostały utworzone pomyślnie",
-      }),
-      {
-        status: 201,
-        headers: {
-          "Content-Type": "application/json",
+    const flashcardsService = new FlashcardsService(locals.supabase, authCheck.userId);
+
+    try {
+      const flashcard = await flashcardsService.createFlashcards([
+        {
+          document_id,
+          topic_id,
+          front_original,
+          back_original,
+          source: "manual",
+          is_approved: false,
         },
-      }
-    );
-  } catch (error) {
-    logger.error("Błąd podczas tworzenia fiszek:", error);
+      ]);
 
+      return new Response(JSON.stringify(flashcard), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      logger.error("Błąd podczas tworzenia fiszki:", error);
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Wystąpił błąd podczas tworzenia fiszki",
+            details: error instanceof Error ? error.message : "Nieznany błąd",
+          },
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+  } catch (error) {
+    logger.error("Nieoczekiwany błąd podczas przetwarzania żądania POST:", error);
     return new Response(
       JSON.stringify({
         error: {
           code: "INTERNAL_SERVER_ERROR",
-          message: "Wystąpił błąd podczas przetwarzania żądania",
+          message: "Wystąpił nieoczekiwany błąd",
           details: error instanceof Error ? error.message : "Nieznany błąd",
         },
       }),
       {
         status: 500,
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       }
     );
   }

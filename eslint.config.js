@@ -56,11 +56,42 @@ const reactConfig = tseslint.config({
   },
 });
 
+const astroConfig = tseslint.config({
+  files: ["**/*.astro"],
+  extends: [eslintPluginAstro.configs["flat/recommended"]],
+  languageOptions: {
+    parserOptions: {
+      parser: "@typescript-eslint/parser",
+      extraFileExtensions: [".astro"],
+    },
+  },
+  rules: {
+    "astro/no-set-html-directive": "error",
+    "astro/no-set-text-directive": "error",
+    "astro/no-unused-css-selector": "error",
+    "astro/valid-compile": "error",
+    "astro/no-conflict-set-directives": "error",
+    "astro/no-deprecated-astro-canonicalurl": "error",
+    "astro/no-deprecated-astro-fetchcontent": "error",
+    "astro/no-deprecated-astro-resolve": "error",
+    "astro/no-deprecated-getentrybyslug": "error",
+    "astro/no-unused-define-vars-in-style": "error",
+    "astro/prefer-class-list-directive": "error",
+    "astro/prefer-object-class-list": "error",
+    "astro/prefer-split-class-list": "error",
+    "astro/require-optimized-style-attribute": "error",
+    "astro/require-view-transitions": "error",
+    "astro/semi": "error",
+    "astro/sort-imports": "error",
+    "astro/valid-define-vars": "error",
+  },
+});
+
 export default tseslint.config(
   includeIgnoreFile(gitignorePath),
   baseConfig,
   jsxA11yConfig,
   reactConfig,
-  eslintPluginAstro.configs["flat/recommended"],
+  astroConfig,
   eslintPluginPrettier
 );

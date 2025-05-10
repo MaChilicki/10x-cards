@@ -12,11 +12,12 @@ import type {
   AiRegenerateResponseDto,
 } from "@/types";
 import type { DocumentEditViewProps, FormValues } from "./types";
-import { useNavigate } from "@/lib/hooks/use-navigate";
+import { useNavigate } from "@/components/hooks/use-navigate";
 import { DocumentEditHeader } from "./document-edit-header";
 import { useConfirmDialog } from "./hooks/use-confirm-dialog";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { toast } from "sonner";
 
 /**
  * Widok edycji dokumentu - umożliwia tworzenie lub edycję dokumentu
@@ -137,6 +138,17 @@ export function DocumentEditView({ documentId, topicId, topicTitle, referrer }: 
     };
   }, [documentId, navigate]);
 
+  // Obsługa wygaśnięcia sesji
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+      navigate("/login");
+    };
+
+    window.addEventListener("session-expired", handleSessionExpired);
+    return () => window.removeEventListener("session-expired", handleSessionExpired);
+  }, [navigate]);
+
   const submitDocument = async (values: FormValues): Promise<void> => {
     const newErrors = validate(values);
     setErrors(newErrors);
@@ -158,12 +170,18 @@ export function DocumentEditView({ documentId, topicId, topicTitle, referrer }: 
         });
 
         if (!response.ok) {
+          if (response.status === 401) {
+            toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+            navigate("/login");
+            return;
+          }
           throw new Error("Nie udało się zaktualizować dokumentu");
         }
 
         const updatedDocument = await response.json();
         setDocument(updatedDocument);
         setIsDirty(false);
+        toast.success("Dokument został zaktualizowany");
 
         // Sprawdź czy treść dokumentu została zmieniona
         if (document?.content !== values.content) {
@@ -282,10 +300,16 @@ export function DocumentEditView({ documentId, topicId, topicTitle, referrer }: 
         });
 
         if (!response.ok) {
+          if (response.status === 401) {
+            toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+            navigate("/login");
+            return;
+          }
           throw new Error("Nie udało się utworzyć dokumentu");
         }
 
         const newDocument = await response.json();
+        toast.success("Dokument został utworzony");
         navigate(`/documents/${newDocument.id}/flashcards/approve`);
       }
       return Promise.resolve();
@@ -332,11 +356,17 @@ export function DocumentEditView({ documentId, topicId, topicTitle, referrer }: 
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+          navigate("/login");
+          return;
+        }
         throw new Error("Nie udało się zregenerować fiszek");
       }
 
       const result: AiRegenerateResponseDto = await response.json();
       logger.info(`Usunięto ${result.deleted_count} fiszek i wygenerowano ${result.flashcards.length} nowych`);
+      toast.success("Fiszki zostały wygenerowane");
 
       // Przekierowanie do widoku zatwierdzania
       navigate(`/documents/${documentId}/flashcards/approve`);

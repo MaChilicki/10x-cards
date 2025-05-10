@@ -25,14 +25,28 @@ Głównym problemem, z jakim borykają się użytkownicy, jest czasochłonność
    - Podczas edycji system porównuje procentową zmianę treści – próg 50% decyduje o klasyfikacji fiszki jako oryginalnej (AI) lub zmodyfikowanej ręcznie.
 
 4. System kont użytkowników:
-   - Rejestracja, logowanie, zmiana hasła (z potwierdzeniem) oraz opcja usunięcia konta.
-   - Każdy użytkownik przechowuje swoje fiszki, które są prywatne i powiązane z kontem.
+   - Rejestracja, logowanie, zmiana hasła oraz opcja usunięcia konta.
+   - Wszystkie dane użytkownika są prywatne i powiązane z kontem, w tym:
+     * Fiszki
+     * Dokumenty
+     * Tematy
+     * Sesje nauki (study_sessions)
+     * Statystyki użytkownika (user_statistics)
+   - Weryfikacja emaila podczas rejestracji i resetowanie hasła poprzez link wysyłany na email.
+   - Automatyczne zarządzanie sesją użytkownika.
+   - Ochrona tras aplikacji przed nieautoryzowanym dostępem.
+   - Implementacja Row Level Security (RLS) w bazie danych dla wszystkich tabel.
+   - Strona logowania jako główna strona serwisu:
+     * Niezalogowani użytkownicy są przekierowywani na stronę logowania
+     * Zalogowani użytkownicy są automatycznie przekierowywani na dashboard
+     * Dostęp do funkcjonalności aplikacji wymaga zalogowania
+   - Brak integracji z zewnętrznymi systemami autentykacji (np. GitHub, Google, Facebook).
+   - Wykorzystanie standardowego połączenia emaila jako loginu i hasła do autentykacji.
 
 5. Hierarchiczna organizacja treści:
    - System pozwala na tworzenie i zarządzanie tematami, które grupują dokumenty.
    - Możliwość przeglądania, tworzenia, edycji i usuwania tematów.
-   - Każdy temat może zawierać wiele dokumentów, a dokumenty mogą być przesuwane między tematami.
-   - Tematy mogą mieć strukturę hierarchiczną (tematy nadrzędne i podrzędne).
+   - Każdy temat może zawierać wiele dokumentów.
 
 6. Zarządzanie dokumentami:
    - Możliwość tworzenia, edycji, przeglądania i usuwania dokumentów.
@@ -82,18 +96,20 @@ Głównym problemem, z jakim borykają się użytkownicy, jest czasochłonność
 
 ### US-002: Automatyczne generowanie fiszek z tekstu
 - Tytuł: Automatyczne generowanie fiszek przy użyciu AI
-- Opis: Po wprowadzeniu tekstu, system korzysta z LLM do wygenerowania dynamicznej listy fiszek. Liczba fiszek jest ustalana w zależności od długości tekstu i zidentyfikowanych kluczowych informacji.
+- Opis: Po zalogowaniu, użytkownik może wprowadzić tekst, a system korzysta z LLM do wygenerowania dynamicznej listy fiszek. Liczba fiszek jest ustalana w zależności od długości tekstu i zidentyfikowanych kluczowych informacji.
 - Kryteria akceptacji:
-  1. Po przesłaniu tekstu system generuje fiszki z podziałem na przód i tył.
-  2. Użytkownik widzi informacje o pochodzeniu fiszki (AI).
-  3. System umożliwia zaakceptowanie lub odrzucenie wygenerowanych fiszek.
+  1. Użytkownik musi być zalogowany, aby uzyskać dostęp do funkcji generowania fiszek.
+  2. Po przesłaniu tekstu system generuje fiszki z podziałem na przód i tył.
+  3. Użytkownik widzi informacje o pochodzeniu fiszki (AI).
+  4. System umożliwia zaakceptowanie lub odrzucenie wygenerowanych fiszek.
 
 ### US-003: Przeglądanie wygenerowanych fiszek
 - Tytuł: Przeglądanie fiszek
-- Opis: Użytkownik może przeglądać wszystkie fiszki, zarówno te wygenerowane przez AI, jak i stworzone ręcznie.
+- Opis: Zalogowany użytkownik może przeglądać wszystkie swoje fiszki, zarówno te wygenerowane przez AI, jak i stworzone ręcznie.
 - Kryteria akceptacji:
-  1. System prezentuje listę wszystkich fiszek powiązanych z kontem użytkownika.
-  2. Możliwe jest filtrowanie fiszek według źródła (AI, manualnie) oraz daty utworzenia.
+  1. Dostęp do listy fiszek wymaga zalogowania.
+  2. System prezentuje listę wszystkich fiszek powiązanych z kontem użytkownika i dokumentem.
+  3. Możliwe jest filtrowanie fiszek według źródła (AI, manualnie) oraz daty utworzenia.
 
 ### US-004: Edycja fiszki
 - Tytuł: Edycja i modyfikacja fiszek
@@ -112,10 +128,11 @@ Głównym problemem, z jakim borykają się użytkownicy, jest czasochłonność
 
 ### US-006: Ręczne tworzenie fiszki
 - Tytuł: Ręczne tworzenie fiszki przy użyciu modala
-- Opis: Użytkownik może ręcznie utworzyć nową fiszkę poprzez modal, wprowadzając osobno treść przodu i tyłu.
+- Opis: Zalogowany użytkownik może ręcznie utworzyć nową fiszkę poprzez modal, wprowadzając osobno treść przodu i tyłu.
 - Kryteria akceptacji:
-  1. Modal umożliwia wprowadzenie i walidację treści.
-  2. Po zatwierdzeniu fiszka zostaje zapisana i widoczna w systemie.
+  1. Dostęp do funkcji tworzenia fiszek wymaga zalogowania.
+  2. Modal umożliwia wprowadzenie i walidację treści.
+  3. Po zatwierdzeniu fiszka zostaje zapisana i widoczna w systemie.
 
 ### US-007: Monitorowanie statystyk fiszek
 - Tytuł: Wyświetlanie statystyk fiszek
@@ -147,13 +164,14 @@ Głównym problemem, z jakim borykają się użytkownicy, jest czasochłonność
 
 ### US-011: Tworzenie i zarządzanie tematami
 - Tytuł: Tworzenie i zarządzanie hierarchią tematów
-- Opis: Użytkownik może tworzyć, przeglądać, edytować i usuwać tematy, które służą do grupowania dokumentów. Tematy mogą mieć strukturę hierarchiczną (tematy nadrzędne i podrzędne).
+- Opis: Zalogowany użytkownik może tworzyć, przeglądać, edytować i usuwać tematy, które służą do grupowania dokumentów. Tematy mogą mieć strukturę hierarchiczną (tematy nadrzędne i podrzędne).
 - Kryteria akceptacji:
-  1. Użytkownik może utworzyć nowy temat podając jego nazwę i opcjonalny opis.
-  2. Tematy mogą być tworzone jako nadrzędne lub podrzędne względem innych tematów.
-  3. Użytkownik może przeglądać listę wszystkich swoich tematów.
-  4. Użytkownik może edytować nazwę i opis istniejącego tematu.
-  5. Użytkownik może usunąć temat, o ile nie zawiera on żadnych dokumentów ani podrzędnych tematów.
+  1. Dostęp do zarządzania tematami wymaga zalogowania.
+  2. Użytkownik może utworzyć nowy temat podając jego nazwę i opcjonalny opis.
+  3. Tematy mogą być tworzone jako nadrzędne lub podrzędne względem innych tematów.
+  4. Użytkownik może przeglądać listę wszystkich swoich tematów.
+  5. Użytkownik może edytować nazwę i opis istniejącego tematu.
+  6. Użytkownik może usunąć temat, o ile nie zawiera on żadnych dokumentów ani podrzędnych tematów.
 
 ### US-012: Przeglądanie tematów
 - Tytuł: Przeglądanie listy tematów i ich szczegółów
@@ -165,55 +183,119 @@ Głównym problemem, z jakim borykają się użytkownicy, jest czasochłonność
 
 ### US-013: Tworzenie dokumentu
 - Tytuł: Tworzenie nowego dokumentu w temacie
-- Opis: Użytkownik może utworzyć nowy dokument w wybranym temacie, podając jego nazwę i treść. Po utworzeniu dokumentu system automatycznie inicjuje proces generowania fiszek przez AI.
+- Opis: Zalogowany użytkownik może utworzyć nowy dokument w wybranym temacie, podając jego nazwę i treść. Po utworzeniu dokumentu system automatycznie inicjuje proces generowania fiszek przez AI.
 - Kryteria akceptacji:
-  1. Użytkownik może utworzyć nowy dokument w wybranym temacie.
-  2. System waliduje poprawność wprowadzonych danych (niepusta nazwa, odpowiednia długość treści).
-  3. Po utworzeniu dokumentu system automatycznie rozpoczyna generowanie fiszek.
-  4. Użytkownik jest przekierowany do widoku zatwierdzania wygenerowanych fiszek.
+  1. Dostęp do tworzenia dokumentów wymaga zalogowania.
+  2. Użytkownik może utworzyć nowy dokument w wybranym temacie.
+  3. System waliduje poprawność wprowadzonych danych (niepusta nazwa, odpowiednia długość treści).
+  4. Po utworzeniu dokumentu system automatycznie rozpoczyna generowanie fiszek.
+  5. Użytkownik jest przekierowany do widoku zatwierdzania wygenerowanych fiszek.
 
 ### US-014: Edycja dokumentu
 - Tytuł: Edycja istniejącego dokumentu
-- Opis: Użytkownik może edytować nazwę i treść istniejącego dokumentu. Po edycji treści system oferuje możliwość ponownego wygenerowania fiszek, z ostrzeżeniem o konsekwencjach.
+- Opis: Zalogowany użytkownik może edytować nazwę i treść istniejącego dokumentu. Po edycji treści system oferuje możliwość ponownego wygenerowania fiszek, z ostrzeżeniem o konsekwencjach.
 - Kryteria akceptacji:
-  1. Użytkownik może edytować nazwę i treść dokumentu.
-  2. System waliduje poprawność wprowadzonych danych.
-  3. Po edycji treści system wyświetla monit o możliwości ponownego wygenerowania fiszek.
-  4. Jeśli użytkownik zdecyduje się na ponowne generowanie fiszek, system oznacza poprzednie fiszki jako nieaktywne i generuje nowe.
+  1. Dostęp do edycji dokumentów wymaga zalogowania.
+  2. Użytkownik może edytować nazwę i treść dokumentu.
+  3. System waliduje poprawność wprowadzonych danych.
+  4. Po edycji treści system wyświetla monit o możliwości ponownego wygenerowania fiszek.
+  5. Jeśli użytkownik zdecyduje się na ponowne generowanie fiszek, system oznacza poprzednie fiszki jako nieaktywne i generuje nowe.
 
 ### US-015: Przeglądanie dokumentów
 - Tytuł: Przeglądanie listy dokumentów i ich szczegółów
-- Opis: Użytkownik może przeglądać listę wszystkich dokumentów w temacie oraz szczegóły wybranego dokumentu, w tym powiązane z nim fiszki.
+- Opis: Zalogowany użytkownik może przeglądać listę wszystkich dokumentów w temacie oraz szczegóły wybranego dokumentu, w tym powiązane z nim fiszki.
 - Kryteria akceptacji:
-  1. System wyświetla listę dokumentów w temacie z informacjami o dacie utworzenia i liczbie fiszek.
-  2. Użytkownik może filtrować i sortować dokumenty.
-  3. System wyświetla szczegóły wybranego dokumentu wraz z listą powiązanych fiszek.
-  4. Użytkownik ma dostęp do akcji zarządzania dokumentem (edycja, usunięcie) oraz fiszkkami (dodanie, edycja, usunięcie).
+  1. Dostęp do przeglądania dokumentów wymaga zalogowania.
+  2. System wyświetla listę dokumentów w temacie z informacjami o dacie utworzenia i liczbie fiszek.
+  3. Użytkownik może filtrować i sortować dokumenty.
+  4. System wyświetla szczegóły wybranego dokumentu wraz z listą powiązanych fiszek.
+  5. Użytkownik ma dostęp do akcji zarządzania dokumentem (edycja, usunięcie) oraz fiszkkami (dodanie, edycja, usunięcie).
 
 ### US-016: Usuwanie dokumentu
 - Tytuł: Usuwanie dokumentu i powiązanych fiszek
-- Opis: Użytkownik może usunąć wybrany dokument, co powoduje również usunięcie wszystkich powiązanych z nim fiszek. System wyświetla ostrzeżenie przed wykonaniem tej operacji.
+- Opis: Zalogowany użytkownik może usunąć wybrany dokument, co powoduje również usunięcie wszystkich powiązanych z nim fiszek. System wyświetla ostrzeżenie przed wykonaniem tej operacji.
 - Kryteria akceptacji:
-  1. System wyświetla monit z ostrzeżeniem przed usunięciem dokumentu i powiązanych fiszek.
-  2. Po potwierdzeniu, dokument i wszystkie powiązane fiszki są usuwane z systemu.
-  3. Użytkownik otrzymuje potwierdzenie pomyślnego usunięcia.
+  1. Dostęp do usuwania dokumentów wymaga zalogowania.
+  2. System wyświetla monit z ostrzeżeniem przed usunięciem dokumentu i powiązanych fiszek.
+  3. Po potwierdzeniu, dokument i wszystkie powiązane fiszki są usuwane z systemu.
+  4. Użytkownik otrzymuje potwierdzenie pomyślnego usunięcia.
 
 ### US-017: Zatwierdzanie fiszek
 - Tytuł: Zatwierdzanie fiszek do dokumentu
-- Opis: Użytkownik może zatwierdzić jedną, wiele lub wszystkie fiszki dokumentu jednocześnie, co znacznie przyspiesza proces akceptacji.
+- Opis: Zalogowany użytkownik może zatwierdzić jedną, wiele lub wszystkie fiszki dokumentu jednocześnie, co znacznie przyspiesza proces akceptacji.
 - Kryteria akceptacji:
-  1. System umożliwia zaznaczenie wielu fiszek i zatwierdzenie ich jednym kliknięciem.
-  2. Istnieje opcja "Zatwierdź wszystkie" dla fiszek powiązanych z dokumentem.
-  3. System wyświetla podsumowanie liczby zatwierdzonych fiszek.
-  4. Zatwierdzenie wszystkich fiszek powoduje powrót do widoku document detail.
+  1. Dostęp do zatwierdzania fiszek wymaga zalogowania.
+  2. System umożliwia zaznaczenie wielu fiszek i zatwierdzenie ich jednym kliknięciem.
+  3. Istnieje opcja "Zatwierdź wszystkie" dla fiszek powiązanych z dokumentem.
+  4. System wyświetla podsumowanie liczby zatwierdzonych fiszek.
+  5. Zatwierdzenie wszystkich fiszek powoduje powrót do widoku document detail.
 
 ### US-018: Zarządzanie zależnościami między tematami
 - Tytuł: Zachowanie integralności danych podczas zarządzania tematami
-- Opis: System zapobiega usunięciu tematów, które zawierają dokumenty lub podtematy, wymagając od użytkownika opróżnienia tematu przed jego usunięciem.
+- Opis: Zalogowany użytkownik może zarządzać zależnościami między tematami, a system zapobiega usunięciu tematów, które zawierają dokumenty lub podtematy, wymagając od użytkownika opróżnienia tematu przed jego usunięciem.
 - Kryteria akceptacji:
-  1. Próba usunięcia tematu zawierającego dokumenty lub podtematy kończy się wyświetleniem komunikatu o błędzie.
-  2. System informuje użytkownika o dokładnej liczbie dokumentów i podtematów, które blokują usunięcie.
-  3. Po opróżnieniu tematu (przeniesieniu lub usunięciu wszystkich dokumentów i podtematów) temat można usunąć.
+  1. Dostęp do zarządzania zależnościami między tematami wymaga zalogowania.
+  2. Próba usunięcia tematu zawierającego dokumenty lub podtematy kończy się wyświetleniem komunikatu o błędzie.
+  3. System informuje użytkownika o dokładnej liczbie dokumentów i podtematów, które blokują usunięcie.
+  4. Po opróżnieniu tematu (przeniesieniu lub usunięciu wszystkich dokumentów i podtematów) temat można usunąć.
+
+### US-019: Rejestracja użytkownika
+- Tytuł: Rejestracja nowego użytkownika
+- Opis: Użytkownik może zarejestrować się w systemie poprzez dedykowaną stronę rejestracji, podając wymagane dane zgodne z mechanizmem autoryzacji Supabase.
+- Kryteria akceptacji:
+  1. Użytkownik ma dostęp do strony rejestracji przed zalogowaniem.
+  2. Formularz rejestracji zawiera pola: email, hasło (z potwierdzeniem), imię i nazwisko.
+  3. System waliduje poprawność wprowadzonych danych (format email, siła hasła).
+  4. Po pomyślnej rejestracji użytkownik otrzymuje email weryfikacyjny.
+  5. Użytkownik musi potwierdzić email przed uzyskaniem pełnego dostępu do systemu.
+
+### US-020: Logowanie użytkownika
+- Tytuł: Logowanie do systemu
+- Opis: Użytkownik może zalogować się do systemu poprzez dedykowaną stronę logowania, używając swoich danych uwierzytelniających.
+- Kryteria akceptacji:
+  1. Użytkownik ma dostęp do strony logowania przed uwierzytelnieniem.
+  2. Formularz logowania zawiera pola: email i hasło.
+  3. System wyświetla odpowiednie komunikaty w przypadku niepoprawnych danych.
+  4. Po pomyślnym zalogowaniu użytkownik jest przekierowany do głównego widoku aplikacji.
+  5. System zapamiętuje sesję użytkownika zgodnie z mechanizmem Supabase.
+
+### US-021: Wylogowanie użytkownika
+- Tytuł: Bezpieczne wylogowanie z systemu
+- Opis: Użytkownik może bezpiecznie wylogować się z systemu, co powoduje zakończenie sesji i przekierowanie do strony logowania.
+- Kryteria akceptacji:
+  1. W menu użytkownika dostępna jest opcja wylogowania.
+  2. Po wylogowaniu sesja użytkownika jest prawidłowo zakończona.
+  3. Użytkownik jest przekierowany do strony logowania.
+  4. Po wylogowaniu nie ma możliwości powrotu do chronionych widoków bez ponownego zalogowania.
+
+### US-022: Zmiana hasła
+- Tytuł: Zmiana hasła użytkownika
+- Opis: Użytkownik może zmienić swoje hasło poprzez dedykowany formularz, wymagający podania aktualnego hasła i nowego hasła (z potwierdzeniem).
+- Kryteria akceptacji:
+  1. W ustawieniach użytkownika dostępna jest opcja zmiany hasła.
+  2. Formularz wymaga podania aktualnego hasła w celu weryfikacji.
+  3. Nowe hasło musi spełniać wymagania bezpieczeństwa (minimalna długość, złożoność).
+  4. System wyświetla potwierdzenie pomyślnej zmiany hasła.
+  5. Po zmianie hasła użytkownik musi zalogować się ponownie.
+
+### US-023: Reset hasła
+- Tytuł: Resetowanie zapomnianego hasła
+- Opis: Użytkownik może zresetować swoje hasło w przypadku jego zapomnienia, poprzez mechanizm wysyłania linku resetującego na zarejestrowany email.
+- Kryteria akceptacji:
+  1. Na stronie logowania dostępna jest opcja "Zapomniałem hasła".
+  2. Użytkownik podaje swój email, na który zostanie wysłany link resetujący.
+  3. Link resetujący prowadzi do formularza ustawiania nowego hasła.
+  4. Nowe hasło musi spełniać wymagania bezpieczeństwa.
+  5. Po pomyślnym zresetowaniu hasła użytkownik może zalogować się nowymi danymi.
+
+### US-024: Zarządzanie sesją
+- Tytuł: Automatyczne zarządzanie sesją użytkownika
+- Opis: System automatycznie zarządza sesją użytkownika zgodnie z mechanizmem Supabase, w tym odświeżaniem tokenów i obsługą wygaśnięcia sesji.
+- Kryteria akceptacji:
+  1. System automatycznie odświeża tokeny autoryzacyjne przed ich wygaśnięciem.
+  2. W przypadku wygaśnięcia sesji użytkownik jest przekierowany do strony logowania.
+  3. Niezapisane zmiany są zachowane przed przekierowaniem do logowania.
+  4. System wyświetla odpowiednie komunikaty o stanie sesji.
 
 ## 6. Metryki sukcesu
 

@@ -1,0 +1,10 @@
+---
+import AuthLayout from "@/layouts/AuthLayout.astro";
+import { RegisterForm } from "@/components/auth/register-form";
+
+export const prerender = false;
+---
+
+<AuthLayout title="Rejestracja">
+  <RegisterForm client:load />
+</AuthLayout>

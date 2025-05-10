@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { TopicFormModal } from "./topic-form-modal";
 import { DeleteTopicDialog } from "./delete-topic-dialog";
@@ -8,9 +8,10 @@ import { useTopics } from "./hooks/use-topics";
 import type { TopicDto, TopicCreateDto } from "@/types";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { useNavigate } from "@/lib/hooks/use-navigate";
+import { useNavigate } from "@/components/hooks/use-navigate";
 import { Pagination } from "@/components/ui/pagination";
 import type { TopicsSortModel } from "./types";
+import { toast } from "sonner";
 
 export function TopicsListView() {
   const navigate = useNavigate();
@@ -26,6 +27,17 @@ export function TopicsListView() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<TopicDto | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+
+  // Obsługa wygaśnięcia sesji
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+      navigate("/login");
+    };
+
+    window.addEventListener("session-expired", handleSessionExpired);
+    return () => window.removeEventListener("session-expired", handleSessionExpired);
+  }, [navigate]);
 
   const handleOpenAddModal = () => {
     setSelectedTopic(null);
@@ -59,17 +71,28 @@ export function TopicsListView() {
     navigate(`/topics/${topic.id}`);
   };
 
-  const handleSubmit = async (data: TopicCreateDto) => {
+  const handleSubmit = async (data: TopicCreateDto | Partial<{ name: string; description: string }>) => {
     try {
       if (isEditMode && selectedTopic) {
-        await updateTopic(selectedTopic.id, data);
+        await updateTopic(selectedTopic.id, data as TopicCreateDto);
+        toast.success("Temat został zaktualizowany");
       } else {
-        await addTopic(data);
+        if (!("name" in data) || !data.name) {
+          throw new Error("Nazwa tematu jest wymagana");
+        }
+        await addTopic(data as TopicCreateDto);
+        toast.success("Temat został dodany");
       }
       handleCloseModal();
       await fetchTopics();
-    } catch {
-      throw new Error("Nie udało się zapisać tematu. Spróbuj ponownie później.");
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("401")) {
+        toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+        navigate("/login");
+      } else {
+        toast.error("Nie udało się zapisać tematu. Spróbuj ponownie później.");
+      }
+      throw error;
     }
   };
 
@@ -78,10 +101,17 @@ export function TopicsListView() {
 
     try {
       await deleteTopic(selectedTopic.id);
+      toast.success("Temat został usunięty");
       handleCloseDeleteDialog();
       await fetchTopics();
-    } catch {
-      throw new Error("Nie udało się usunąć tematu. Spróbuj ponownie później.");
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("401")) {
+        toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+        navigate("/login");
+      } else {
+        toast.error("Nie udało się usunąć tematu. Spróbuj ponownie później.");
+      }
+      throw error;
     }
   };
 

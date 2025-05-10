@@ -1,4 +1,4 @@
-import type { TopicDto, TopicCreateDto } from "@/types";
+import type { TopicDto, TopicCreateDto, TopicUpdateDto } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +18,7 @@ interface TopicFormModalProps {
   isEditMode: boolean;
   initialData: TopicDto | null;
   onClose: () => void;
-  onSubmit: (data: TopicCreateDto) => Promise<void>;
+  onSubmit: (data: TopicCreateDto | TopicUpdateDto) => Promise<void>;
 }
 
 export function TopicFormModal({ isOpen, isEditMode, initialData, onClose, onSubmit }: TopicFormModalProps) {
@@ -35,6 +35,7 @@ export function TopicFormModal({ isOpen, isEditMode, initialData, onClose, onSub
   const { formData, errors, submitting, handleChange, handleSubmit, reset } = useTopicForm({
     initialData: createDto,
     onSubmit,
+    isEditMode,
   });
 
   const handleFormSubmit = async (e: React.FormEvent) => {

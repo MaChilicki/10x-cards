@@ -1,5 +1,4 @@
-import type { SupabaseClient } from "../../db/supabase.client";
-import { DEFAULT_USER_ID } from "../../db/supabase.client";
+import type { SupabaseClient } from "@/db/supabase.client";
 import type { TopicDto, TopicsListResponseDto } from "../../types";
 import {
   topicIdSchema,
@@ -7,9 +6,15 @@ import {
   type TopicCreateParams,
   type TopicUpdateParams,
 } from "../schemas/topics.schema";
+import { logger } from "./logger.service";
 
 export class TopicsService {
-  constructor(private readonly supabase: SupabaseClient) {}
+  constructor(
+    private readonly supabase: SupabaseClient,
+    private readonly userId: string
+  ) {
+    logger.info(`TopicsService inicjalizowany - userId: ${userId}`);
+  }
 
   private async getBreadcrumbs(topicId: string | null): Promise<{ id: string; name: string }[]> {
     const breadcrumbs: { id: string; name: string }[] = [];
@@ -20,6 +25,7 @@ export class TopicsService {
         .from("topics")
         .select("id, name, parent_id")
         .eq("id", currentId)
+        .eq("user_id", this.userId)
         .single();
 
       if (error || !topic) break;
@@ -32,8 +38,12 @@ export class TopicsService {
   }
 
   async list(params: TopicsQueryParams): Promise<TopicsListResponseDto> {
+    logger.info(`Rozpoczynam pobieranie listy tematów - parametry: ${JSON.stringify(params)}, userId: ${this.userId}`);
+
     const { page, limit, sort, parent_id, name } = params;
     const offset = (page - 1) * limit;
+
+    logger.info(`Konstruuję zapytanie - offset: ${offset}, limit: ${limit}, sort: ${sort}, userId: ${this.userId}`);
 
     let query = this.supabase
       .from("topics")
@@ -45,21 +55,25 @@ export class TopicsService {
       `,
         { count: "exact" }
       )
-      .eq("user_id", DEFAULT_USER_ID);
+      .eq("user_id", this.userId);
 
     // Filtrowanie po parent_id
     if (parent_id === null) {
+      logger.info("Dodaję filtr parent_id IS NULL");
       query = query.is("parent_id", null);
     } else if (parent_id) {
+      logger.info(`Dodaję filtr parent_id = ${parent_id}`);
       query = query.eq("parent_id", parent_id);
     }
 
     // Filtrowanie po nazwie
     if (name) {
+      logger.info(`Dodaję filtr name ILIKE %${name}%`);
       query = query.ilike("name", `%${name}%`);
     }
 
     // Sortowanie i paginacja
+    logger.info(`Dodaję sortowanie po ${sort} i paginację ${offset}-${offset + limit - 1}`);
     const {
       data: topics,
       count,
@@ -67,17 +81,24 @@ export class TopicsService {
     } = await query.order(sort, { ascending: true }).range(offset, offset + limit - 1);
 
     if (error) {
+      logger.error(`Błąd podczas pobierania tematów: ${error.message}, userId: ${this.userId}`, error);
       throw new Error(`Błąd podczas pobierania tematów: ${error.message}`);
     }
 
+    logger.info(`Pobrano ${topics?.length || 0} tematów, łączna liczba: ${count || 0}, userId: ${this.userId}`);
+
     // Pobierz breadcrumbs dla każdego tematu
     const topicsWithBreadcrumbs = await Promise.all(
-      topics.map(async (topic) => ({
-        ...topic,
-        documents_count: topic.documents[0]?.count || 0,
-        flashcards_count: topic.flashcards[0]?.count || 0,
-        breadcrumbs: await this.getBreadcrumbs(topic.id),
-      }))
+      topics.map(async (topic) => {
+        const breadcrumbs = await this.getBreadcrumbs(topic.id);
+        logger.info(`Pobrano breadcrumbs dla tematu ${topic.id}: ${JSON.stringify(breadcrumbs)}`);
+        return {
+          ...topic,
+          documents_count: topic.documents[0]?.count || 0,
+          flashcards_count: topic.flashcards[0]?.count || 0,
+          breadcrumbs,
+        };
+      })
     );
 
     return {
@@ -87,7 +108,7 @@ export class TopicsService {
   }
 
   async create(data: TopicCreateParams): Promise<TopicDto> {
-    let query = this.supabase.from("topics").select("id").eq("name", data.name).eq("user_id", DEFAULT_USER_ID);
+    let query = this.supabase.from("topics").select("id").eq("name", data.name).eq("user_id", this.userId);
 
     // Dodajemy warunek na parent_id osobno
     if (data.parent_id === undefined || data.parent_id === null) {
@@ -111,7 +132,7 @@ export class TopicsService {
       .from("topics")
       .insert({
         ...data,
-        user_id: DEFAULT_USER_ID,
+        user_id: this.userId,
       })
       .select(
         `
@@ -148,7 +169,7 @@ export class TopicsService {
       `
       )
       .eq("id", validatedId)
-      .eq("user_id", DEFAULT_USER_ID)
+      .eq("user_id", this.userId)
       .single();
 
     if (error) {
@@ -177,7 +198,7 @@ export class TopicsService {
         .from("topics")
         .select("id")
         .eq("name", data.name)
-        .eq("user_id", DEFAULT_USER_ID)
+        .eq("user_id", this.userId)
         .neq("id", validatedId);
 
       // Dodajemy warunek na parent_id osobno
@@ -203,7 +224,7 @@ export class TopicsService {
       .from("topics")
       .update(data)
       .eq("id", validatedId)
-      .eq("user_id", DEFAULT_USER_ID)
+      .eq("user_id", this.userId)
       .select(
         `
         *,
@@ -234,7 +255,7 @@ export class TopicsService {
       .from("topics")
       .select("id, name")
       .eq("parent_id", validatedId)
-      .eq("user_id", DEFAULT_USER_ID);
+      .eq("user_id", this.userId);
 
     if (childError) {
       throw new Error(`Błąd podczas sprawdzania podrzędnych tematów: ${childError.message}`);
@@ -272,7 +293,7 @@ export class TopicsService {
       throw new Error("Nie można usunąć tematu, który ma przypisane fiszki");
     }
 
-    const { error } = await this.supabase.from("topics").delete().eq("id", validatedId).eq("user_id", DEFAULT_USER_ID);
+    const { error } = await this.supabase.from("topics").delete().eq("id", validatedId).eq("user_id", this.userId);
 
     if (error) {
       throw new Error(`Błąd podczas usuwania tematu: ${error.message}`);

@@ -7,6 +7,7 @@ export interface OpenRouterConfig {
 
 export interface ChatParams {
   model: string;
+  messages: ChatMessage[];
   parameter: number;
   top_p: number;
   frequency_penalty: number;

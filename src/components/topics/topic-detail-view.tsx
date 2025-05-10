@@ -10,9 +10,10 @@ import type { DocumentsSortModel } from "@/components/documents/types";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "@/lib/hooks/use-navigate";
+import { useNavigate } from "@/components/hooks/use-navigate";
 import { useSearchParams } from "../hooks/use-search-params";
 import { logger } from "@/lib/services/logger.service";
+import { toast } from "sonner";
 
 interface TopicDetailViewProps {
   /** ID tematu do wyświetlenia */
@@ -72,6 +73,17 @@ const TopicDetailView = ({ topicId }: TopicDetailViewProps) => {
     return () => window.removeEventListener("popstate", handlePopState);
   }, [refetchTopic, refetchDocuments]);
 
+  // Obsługa wygaśnięcia sesji
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+      navigate("/login");
+    };
+
+    window.addEventListener("session-expired", handleSessionExpired);
+    return () => window.removeEventListener("session-expired", handleSessionExpired);
+  }, [navigate]);
+
   const [documentToDelete, setDocumentToDelete] = useState<DocumentViewModel | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<Error | null>(null);
@@ -124,10 +136,16 @@ const TopicDetailView = ({ topicId }: TopicDetailViewProps) => {
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+          navigate("/login");
+          return;
+        }
         const data = await response.json();
         throw new Error(data.error?.message || "Nie udało się usunąć dokumentu");
       }
 
+      toast.success("Dokument został usunięty");
       setDocumentToDelete(null);
       refetchDocuments();
       refetchTopic();

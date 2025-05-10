@@ -3,15 +3,24 @@ import { TopicsService } from "../../../lib/services/topics.service";
 import { logger } from "../../../lib/services/logger.service";
 import type { TopicCreateDto } from "@/types";
 import { topicsQuerySchema, topicCreateSchema } from "../../../lib/schemas/topics.schema";
+import { checkAuthorization } from "../../../lib/services/auth.service";
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ url, locals }) => {
+export const GET: APIRoute = async ({ url, locals }): Promise<Response> => {
   try {
+    const authCheck = checkAuthorization(locals);
+    if (!authCheck.authorized || !authCheck.userId) {
+      return authCheck.response as Response;
+    }
+
     const searchParams = Object.fromEntries(url.searchParams);
+    logger.info(`GET /api/topics - Parametry zapytania: ${JSON.stringify(searchParams)}`);
+
     const validationResult = topicsQuerySchema.safeParse(searchParams);
 
     if (!validationResult.success) {
+      logger.warn(`GET /api/topics - Błąd walidacji parametrów: ${JSON.stringify(validationResult.error.format())}`);
       return new Response(
         JSON.stringify({
           error: {
@@ -27,10 +36,15 @@ export const GET: APIRoute = async ({ url, locals }) => {
       );
     }
 
-    const topicsService = new TopicsService(locals.supabase);
+    logger.info(`GET /api/topics - Tworzę TopicsService z userId: ${authCheck.userId}`);
+    const topicsService = new TopicsService(locals.supabase, authCheck.userId);
 
     try {
+      logger.info(
+        `GET /api/topics - Próba pobrania listy tematów z parametrami: ${JSON.stringify(validationResult.data)}`
+      );
       const result = await topicsService.list(validationResult.data);
+      logger.info(`GET /api/topics - Pobrano ${result.topics.length} tematów`);
       return new Response(JSON.stringify(result), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -69,8 +83,13 @@ export const GET: APIRoute = async ({ url, locals }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request, locals }): Promise<Response> => {
   try {
+    const authCheck = checkAuthorization(locals);
+    if (!authCheck.authorized || !authCheck.userId) {
+      return authCheck.response as Response;
+    }
+
     const contentType = request.headers.get("Content-Type");
     if (!contentType?.includes("application/json")) {
       return new Response(
@@ -124,7 +143,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
 
-    const topicsService = new TopicsService(locals.supabase);
+    const topicsService = new TopicsService(locals.supabase, authCheck.userId);
 
     try {
       const topic = await topicsService.create(validationResult.data);

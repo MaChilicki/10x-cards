@@ -9,12 +9,15 @@ import { AlertConfirmDialog } from "../ui/alert-confirm-dialog";
 import { LoadingSpinner } from "../ui/loading-spinner";
 import { ErrorAlert } from "../ui/error-alert";
 import { EmptyState } from "@/components/ui/empty-state";
+import { toast } from "sonner";
+import { useNavigate } from "@/components/hooks/use-navigate";
 
 interface FlashcardsApprovalViewProps {
   documentId: string;
 }
 
 export function FlashcardsApprovalView({ documentId }: FlashcardsApprovalViewProps) {
+  const navigate = useNavigate();
   const {
     // Stan
     document,
@@ -38,6 +41,17 @@ export function FlashcardsApprovalView({ documentId }: FlashcardsApprovalViewPro
     fetchDocument,
     fetchFlashcards,
   } = useFlashcardsApproval(documentId);
+
+  // Obsługa wygaśnięcia sesji
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+      navigate("/login");
+    };
+
+    window.addEventListener("session-expired", handleSessionExpired);
+    return () => window.removeEventListener("session-expired", handleSessionExpired);
+  }, [navigate]);
 
   // Efekt pobierający dane przy montowaniu komponentu
   useEffect(() => {
@@ -70,6 +84,11 @@ export function FlashcardsApprovalView({ documentId }: FlashcardsApprovalViewPro
 
   // Obsługa błędu ładowania dokumentu
   if (documentError) {
+    if (documentError.message.includes("401")) {
+      toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+      navigate("/login");
+      return null;
+    }
     return (
       <ErrorAlert title="Błąd ładowania" message={`Nie udało się załadować dokumentu: ${documentError.message}`} />
     );
@@ -77,6 +96,11 @@ export function FlashcardsApprovalView({ documentId }: FlashcardsApprovalViewPro
 
   // Obsługa błędu ładowania fiszek
   if (flashcardsError) {
+    if (flashcardsError.message.includes("401")) {
+      toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+      navigate("/login");
+      return null;
+    }
     return <ErrorAlert title="Błąd ładowania" message={`Nie udało się załadować fiszek: ${flashcardsError.message}`} />;
   }
 
@@ -86,7 +110,7 @@ export function FlashcardsApprovalView({ documentId }: FlashcardsApprovalViewPro
       <EmptyState
         message="Nie znaleziono dokumentu"
         actionText="Powrót do listy dokumentów"
-        onAction={() => (window.location.href = "/documents")}
+        onAction={() => navigate("/documents")}
       />
     );
   }
@@ -101,7 +125,7 @@ export function FlashcardsApprovalView({ documentId }: FlashcardsApprovalViewPro
           manualFlashcardsCount={document.manual_flashcards_count || 0}
           isLoading={isLoadingDocument}
           showActions={false}
-          onBack={() => (window.location.href = `/documents/${document.id}`)}
+          onBack={() => navigate(`/documents/${document.id}`)}
           showApprovalBreadcrumb
         />
 
@@ -110,8 +134,32 @@ export function FlashcardsApprovalView({ documentId }: FlashcardsApprovalViewPro
           totalCount={flashcards.length}
           allSelected={allSelected}
           onSelectAll={actions.handleSelectAll}
-          onApproveSelected={actions.approveSelectedFlashcards}
-          onApproveAll={actions.approveAllFlashcards}
+          onApproveSelected={async () => {
+            try {
+              await actions.approveSelectedFlashcards();
+              toast.success("Wybrane fiszki zostały zatwierdzone");
+            } catch (error) {
+              if (error instanceof Error && error.message.includes("401")) {
+                toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+                navigate("/login");
+              } else {
+                toast.error("Nie udało się zatwierdzić wybranych fiszek");
+              }
+            }
+          }}
+          onApproveAll={async () => {
+            try {
+              await actions.approveAllFlashcards();
+              toast.success("Wszystkie fiszki zostały zatwierdzone");
+            } catch (error) {
+              if (error instanceof Error && error.message.includes("401")) {
+                toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+                navigate("/login");
+              } else {
+                toast.error("Nie udało się zatwierdzić wszystkich fiszek");
+              }
+            }
+          }}
           isLoading={isLoadingFlashcards}
           selectedFlashcards={flashcards.filter((f) => selectedFlashcards[f.id])}
           allFlashcards={flashcards}
@@ -135,13 +183,37 @@ export function FlashcardsApprovalView({ documentId }: FlashcardsApprovalViewPro
             if (!existingFlashcard) {
               throw new Error(`Nie znaleziono fiszki o ID: ${id}`);
             }
-            await actions.handleEditFlashcard({
-              ...existingFlashcard,
-              ...updates,
-              is_modified: true,
-            });
+            try {
+              await actions.handleEditFlashcard({
+                ...existingFlashcard,
+                ...updates,
+                is_modified: true,
+              });
+              toast.success("Fiszka została zaktualizowana");
+            } catch (error) {
+              if (error instanceof Error && error.message.includes("401")) {
+                toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+                navigate("/login");
+              } else {
+                toast.error("Nie udało się zaktualizować fiszki");
+              }
+              throw error;
+            }
           }}
-          onDeleteFlashcard={actions.handleDeleteFlashcard}
+          onDeleteFlashcard={async (id) => {
+            try {
+              await actions.handleDeleteFlashcard(id);
+              toast.success("Fiszka została usunięta");
+            } catch (error) {
+              if (error instanceof Error && error.message.includes("401")) {
+                toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+                navigate("/login");
+              } else {
+                toast.error("Nie udało się usunąć fiszki");
+              }
+              throw error;
+            }
+          }}
           onPageChange={actions.handlePageChange}
           onToggleSelect={actions.handleToggleSelect}
           onApproveFlashcard={async (id) => {
@@ -167,8 +239,19 @@ export function FlashcardsApprovalView({ documentId }: FlashcardsApprovalViewPro
                   </div>
                 </div>`,
                 async () => {
-                  await actions.approveFlashcard(id);
-                  resolve();
+                  try {
+                    await actions.approveFlashcard(id);
+                    toast.success("Fiszka została zatwierdzona");
+                    resolve();
+                  } catch (error) {
+                    if (error instanceof Error && error.message.includes("401")) {
+                      toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+                      navigate("/login");
+                    } else {
+                      toast.error("Nie udało się zatwierdzić fiszki");
+                    }
+                    throw error;
+                  }
                 },
                 "Zatwierdź"
               );
@@ -179,7 +262,20 @@ export function FlashcardsApprovalView({ documentId }: FlashcardsApprovalViewPro
         <EditFlashcardModal
           isOpen={editModalState.isOpen}
           onClose={actions.handleCloseEdit}
-          onSubmit={(data) => actions.handleSaveEdit(editModalState.flashcard?.id || "", data)}
+          onSubmit={async (data) => {
+            try {
+              await actions.handleSaveEdit(editModalState.flashcard?.id || "", data);
+              toast.success("Fiszka została zaktualizowana");
+            } catch (error) {
+              if (error instanceof Error && error.message.includes("401")) {
+                toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+                navigate("/login");
+              } else {
+                toast.error("Nie udało się zaktualizować fiszki");
+              }
+              throw error;
+            }
+          }}
           flashcard={editModalState.flashcard}
           isSubmitting={editModalState.isSubmitting}
           mode="edit"

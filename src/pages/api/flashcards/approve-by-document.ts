@@ -2,15 +2,54 @@ import type { APIRoute } from "astro";
 import { FlashcardsService } from "../../../lib/services/flashcards.service";
 import { flashcardApproveByDocumentSchema } from "../../../lib/schemas/flashcards.schema";
 import { logger } from "../../../lib/services/logger.service";
-import { supabaseClient } from "../../../db/supabase.client";
+import { checkAuthorization } from "../../../lib/services/auth.service";
 
 export const prerender = false;
 
-export const PATCH: APIRoute = async ({ request }) => {
+export const PATCH: APIRoute = async ({ request, locals }): Promise<Response> => {
   try {
-    const body = await request.json();
-    const validationResult = flashcardApproveByDocumentSchema.safeParse(body);
+    const authCheck = checkAuthorization(locals);
+    if (!authCheck.authorized || !authCheck.userId) {
+      return authCheck.response as Response;
+    }
 
+    const contentType = request.headers.get("Content-Type");
+    if (!contentType?.includes("application/json")) {
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "INVALID_CONTENT_TYPE",
+            message: "Nieprawidłowy format danych",
+            details: "Wymagany Content-Type: application/json",
+          },
+        }),
+        {
+          status: 415,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "INVALID_JSON",
+            message: "Nieprawidłowy format JSON",
+            details: "Nie można sparsować body requestu",
+          },
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const validationResult = flashcardApproveByDocumentSchema.safeParse(body);
     if (!validationResult.success) {
       return new Response(
         JSON.stringify({
@@ -29,7 +68,7 @@ export const PATCH: APIRoute = async ({ request }) => {
       );
     }
 
-    const flashcardsService = new FlashcardsService(supabaseClient);
+    const flashcardsService = new FlashcardsService(locals.supabase, authCheck.userId);
     const result = await flashcardsService.approveByDocument(validationResult.data.document_id);
 
     return new Response(

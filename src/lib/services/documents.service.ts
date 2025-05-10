@@ -1,5 +1,4 @@
-import type { SupabaseClient } from "../../db/supabase.client";
-import { DEFAULT_USER_ID } from "../../db/supabase.client";
+import type { SupabaseClient } from "@/db/supabase.client";
 import type { DocumentDto, DocumentsListResponseDto } from "@/types";
 import type { DocumentsQueryParams, DocumentCreateParams, DocumentUpdateParams } from "../schemas/documents.schema";
 import { AiGenerateService } from "./ai-generate.service";
@@ -12,7 +11,8 @@ import { logger } from "./logger.service";
 export class DocumentsService {
   constructor(
     private readonly supabase: SupabaseClient,
-    private readonly aiGenerateService: AiGenerateService = new AiGenerateService(supabase)
+    private readonly userId: string,
+    private readonly aiGenerateService: AiGenerateService = new AiGenerateService(supabase, userId)
   ) {}
 
   /**
@@ -197,7 +197,7 @@ export class DocumentsService {
     // Dodajemy user_id do danych dokumentu
     const documentData = {
       ...data,
-      user_id: DEFAULT_USER_ID,
+      user_id: this.userId,
     };
 
     const { data: document, error } = await this.supabase.from("documents").insert(documentData).select().single();

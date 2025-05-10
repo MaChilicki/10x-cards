@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import type { TopicCreateDto } from "@/types";
+import type { TopicCreateDto, TopicUpdateDto } from "@/types.ts";
 
 interface UseTopicFormProps {
   initialData?: TopicCreateDto;
-  onSubmit?: (data: TopicCreateDto) => Promise<void>;
+  onSubmit?: (data: TopicCreateDto | TopicUpdateDto) => Promise<void>;
+  isEditMode?: boolean;
 }
 
 interface TopicFormErrors {
@@ -18,7 +19,7 @@ const defaultFormData: TopicCreateDto = {
   parent_id: null,
 };
 
-export function useTopicForm({ initialData, onSubmit }: UseTopicFormProps = {}) {
+export function useTopicForm({ initialData, onSubmit, isEditMode = false }: UseTopicFormProps = {}) {
   const [formData, setFormData] = useState<TopicCreateDto>(initialData || defaultFormData);
   const [errors, setErrors] = useState<TopicFormErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -84,13 +85,26 @@ export function useTopicForm({ initialData, onSubmit }: UseTopicFormProps = {}) 
     setErrors({});
 
     try {
-      const submittedData: TopicCreateDto = {
-        name: formData.name.trim(),
-        description: formData.description?.trim() || undefined,
-        parent_id: formData.parent_id,
-      };
+      if (isEditMode) {
+        const submittedData: TopicUpdateDto = {};
 
-      await onSubmit(submittedData);
+        // Dodaj tylko zmienione pola
+        if (formData.name !== initialData?.name) {
+          submittedData.name = formData.name.trim();
+        }
+        if (formData.description !== initialData?.description) {
+          submittedData.description = formData.description?.trim() || undefined;
+        }
+
+        await onSubmit(submittedData);
+      } else {
+        const submittedData: TopicCreateDto = {
+          name: formData.name.trim(),
+          description: formData.description?.trim() || undefined,
+          parent_id: formData.parent_id,
+        };
+        await onSubmit(submittedData);
+      }
     } catch (err) {
       setErrors({
         general: err instanceof Error ? err.message : "Wystąpił nieznany błąd",

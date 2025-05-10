@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Trash2, Edit } from "lucide-react";
 import type { DocumentViewModel } from "./types";
-import { useNavigate } from "@/lib/hooks/use-navigate";
+import { useNavigate } from "@/components/hooks/use-navigate";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";

@@ -14,6 +14,8 @@ import type { FlashcardsSortModel } from "../flashcards/types";
 import type { FlashcardDto, FlashcardCreateDto, FlashcardsListResponseDto, AiRegenerateResponseDto } from "@/types";
 import { logger } from "@/lib/services/logger.service";
 import { LoadingSpinner } from "../ui/loading-spinner";
+import { toast } from "sonner";
+import { useNavigate } from "@/components/hooks/use-navigate";
 
 interface DocumentDetailViewProps {
   documentId: string;
@@ -60,6 +62,8 @@ export function DocumentDetailView({ documentId }: DocumentDetailViewProps) {
   const { actions: dialogActions, dialogState } = useConfirmDialog();
   const [actionError, setActionError] = useState<Error | null>(null);
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     if (documentId) {
       refetchDocument();
@@ -67,6 +71,17 @@ export function DocumentDetailView({ documentId }: DocumentDetailViewProps) {
     }
     return undefined;
   }, [documentId, refetchDocument, refetchFlashcards]);
+
+  // Obsługa wygaśnięcia sesji
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+      navigate("/login");
+    };
+
+    window.addEventListener("session-expired", handleSessionExpired);
+    return () => window.removeEventListener("session-expired", handleSessionExpired);
+  }, [navigate]);
 
   const handleAddFlashcard = async (data: FlashcardCreateDto) => {
     setIsAddingFlashcard(true);
@@ -90,9 +105,15 @@ export function DocumentDetailView({ documentId }: DocumentDetailViewProps) {
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+          navigate("/login");
+          return;
+        }
         throw new Error("Nie udało się dodać fiszki");
       }
 
+      toast.success("Fiszka została dodana");
       setIsAddModalOpen(false);
       await Promise.all([refetchFlashcards(), refetchDocument()]);
     } catch (error) {
@@ -114,9 +135,15 @@ export function DocumentDetailView({ documentId }: DocumentDetailViewProps) {
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+          navigate("/login");
+          return;
+        }
         throw new Error("Nie udało się zaktualizować fiszki");
       }
 
+      toast.success("Fiszka została zaktualizowana");
       await Promise.all([refetchFlashcards(), refetchDocument()]);
     } catch (error) {
       logger.error("Błąd podczas edycji fiszki:", error);
@@ -146,9 +173,15 @@ export function DocumentDetailView({ documentId }: DocumentDetailViewProps) {
             });
 
             if (!response.ok) {
+              if (response.status === 401) {
+                toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+                navigate("/login");
+                return;
+              }
               throw new Error("Nie udało się usunąć fiszki");
             }
 
+            toast.success("Fiszka została usunięta");
             await Promise.all([refetchFlashcards(), refetchDocument()]);
             resolve();
           } catch (error) {
@@ -162,14 +195,23 @@ export function DocumentDetailView({ documentId }: DocumentDetailViewProps) {
   const handleDeleteDocument = async () => {
     try {
       await documentActions.deleteDocument();
+      toast.success("Dokument został usunięty");
       window.location.href = "/documents";
     } catch (error) {
-      setActionError(error instanceof Error ? error : new Error("Nieznany błąd podczas usuwania dokumentu"));
+      if (error instanceof Error && error.message.includes("401")) {
+        toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
+        navigate("/login");
+      } else {
+        setActionError(error instanceof Error ? error : new Error("Nieznany błąd podczas usuwania dokumentu"));
+      }
     }
   };
 
   const handleRegenerateFlashcards = async () => {
     try {
+      // Usuwam flagę regeneracji z początku funkcji
+      setRegenerationError(null);
+
       // Pobierz fiszki AI
       const params = new URLSearchParams({
         document_id: documentId,
@@ -237,10 +279,18 @@ export function DocumentDetailView({ documentId }: DocumentDetailViewProps) {
         onConfirm: async () => {
           // Zamknij dialog przed rozpoczęciem generowania
           dialogActions.closeDialog();
-          setIsRegenerating(true);
-          setRegenerationError(null);
 
           try {
+            // Ustawiam flagę regeneracji po potwierdzeniu przez użytkownika
+            setIsRegenerating(true);
+
+            // Flaga zapobiegająca wielokrotnym przekierowaniom
+            let redirected = false;
+
+            // Dodaj timeout dla requestu
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minut timeout
+
             const response = await fetch("/api/flashcards/ai-regenerate", {
               method: "POST",
               headers: {
@@ -249,23 +299,52 @@ export function DocumentDetailView({ documentId }: DocumentDetailViewProps) {
               body: JSON.stringify({
                 document_id: documentId,
               }),
+              signal: controller.signal,
             });
 
+            clearTimeout(timeoutId);
+
             if (!response.ok) {
-              throw new Error("Nie udało się zregenerować fiszek");
+              const errorData = await response.json().catch(() => null);
+              throw new Error(errorData?.error?.message || `Nie udało się zregenerować fiszek (${response.status})`);
             }
 
             const result: AiRegenerateResponseDto = await response.json();
             logger.info(`Usunięto ${result.deleted_count} fiszek i wygenerowano ${result.flashcards.length} nowych`);
 
-            // Przekierowanie do widoku zatwierdzania
-            window.location.href = `/documents/${documentId}/flashcards/approve`;
+            // Sprawdzamy czy faktycznie wygenerowano fiszki
+            if (result.flashcards && result.flashcards.length > 0 && !redirected) {
+              redirected = true;
+              // Przekierowanie bezpośrednio po otrzymaniu odpowiedzi
+              logger.info(`Wygenerowano ${result.flashcards.length} fiszek, przekierowuję do widoku zatwierdzania...`);
+              // Nie ustawiamy stanu przed przekierowaniem
+              window.location.replace(`/documents/${documentId}/flashcards/approve`);
+              return; // Przerywamy wykonanie funkcji po przekierowaniu
+            } else if (!redirected) {
+              // Tylko w przypadku braku fiszek pokazujemy toast
+              if (!flashcards || flashcards.length === 0) {
+                logger.error("Nie wygenerowano żadnych fiszek, przekierowanie anulowane");
+                return;
+              }
+              toast.error("Wygenerowano 0 fiszek. Spróbuj ponownie później.");
+              setIsRegenerating(false);
+            }
           } catch (error) {
             logger.error("Błąd podczas regeneracji fiszek:", error);
-            setRegenerationError(
-              error instanceof Error ? error : new Error("Nieznany błąd podczas regeneracji fiszek")
-            );
-          } finally {
+
+            if (error instanceof Error) {
+              if (error.name === "AbortError") {
+                setRegenerationError(new Error("Przekroczono czas oczekiwania na odpowiedź (5 minut)"));
+                toast.error("Przekroczono czas oczekiwania na odpowiedź. Spróbuj ponownie później.");
+              } else {
+                setRegenerationError(error);
+                toast.error(error.message);
+              }
+            } else {
+              setRegenerationError(new Error("Nieznany błąd podczas regeneracji fiszek"));
+              toast.error("Wystąpił nieznany błąd podczas regeneracji fiszek");
+            }
+            // W przypadku błędu zamykamy tryb regeneracji
             setIsRegenerating(false);
           }
         },
@@ -273,6 +352,8 @@ export function DocumentDetailView({ documentId }: DocumentDetailViewProps) {
     } catch (error) {
       logger.error("Błąd podczas pobierania fiszek AI:", error);
       setRegenerationError(error instanceof Error ? error : new Error("Nieznany błąd podczas pobierania fiszek AI"));
+      toast.error("Nie udało się pobrać listy fiszek AI");
+      setIsRegenerating(false);
     }
   };
 

@@ -3,12 +3,18 @@ import { documentCreateSchema, documentsQuerySchema } from "../../../lib/schemas
 import { DocumentsService } from "../../../lib/services/documents.service";
 import { logger } from "../../../lib/services/logger.service";
 import { AiGenerateService } from "../../../lib/services/ai-generate.service";
+import { checkAuthorization } from "../../../lib/services/auth.service";
 import type { DocumentCreateDto } from "@/types";
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ url, locals }) => {
+export const GET: APIRoute = async ({ url, locals }): Promise<Response> => {
   try {
+    const authCheck = checkAuthorization(locals);
+    if (!authCheck.authorized || !authCheck.userId) {
+      return authCheck.response as Response;
+    }
+
     const searchParams = Object.fromEntries(url.searchParams);
     const validationResult = documentsQuerySchema.safeParse(searchParams);
 
@@ -28,7 +34,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
       );
     }
 
-    const documentsService = new DocumentsService(locals.supabase);
+    const documentsService = new DocumentsService(locals.supabase, authCheck.userId);
 
     try {
       const result = await documentsService.listDocuments(validationResult.data);
@@ -70,8 +76,13 @@ export const GET: APIRoute = async ({ url, locals }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request, locals }): Promise<Response> => {
   try {
+    const authCheck = checkAuthorization(locals);
+    if (!authCheck.authorized || !authCheck.userId) {
+      return authCheck.response as Response;
+    }
+
     const contentType = request.headers.get("Content-Type");
     if (!contentType?.includes("application/json")) {
       return new Response(
@@ -125,8 +136,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
 
-    const documentsService = new DocumentsService(locals.supabase);
-    const aiGenerateService = new AiGenerateService(locals.supabase);
+    const documentsService = new DocumentsService(locals.supabase, authCheck.userId);
+    const aiGenerateService = new AiGenerateService(locals.supabase, authCheck.userId);
 
     try {
       const document = await documentsService.createDocument(validationResult.data);

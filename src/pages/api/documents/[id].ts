@@ -1,43 +1,27 @@
 import type { APIRoute } from "astro";
-import { documentIdSchema, documentUpdateSchema } from "../../../lib/schemas/documents.schema";
+import { documentUpdateSchema } from "../../../lib/schemas/documents.schema";
 import { DocumentsService } from "../../../lib/services/documents.service";
 import { logger } from "../../../lib/services/logger.service";
+import { checkAuthorization } from "../../../lib/services/auth.service";
 
 export const prerender = false;
 
-// Wspólna funkcja do walidacji ID dokumentu
-const validateDocumentId = (params: Record<string, string | undefined>) => {
-  if (!params.id) {
-    return {
-      success: false as const,
-      error: "Brak ID dokumentu",
-    };
-  }
-
-  const result = documentIdSchema.safeParse(params.id);
-  if (!result.success) {
-    return {
-      success: false as const,
-      error: "Nieprawidłowy format ID dokumentu",
-      details: result.error.format(),
-    };
-  }
-
-  return {
-    success: true as const,
-    id: result.data,
-  };
-};
-
-export const GET: APIRoute = async ({ params, locals }) => {
+export const GET: APIRoute = async ({ params, locals }): Promise<Response> => {
   try {
-    const idValidation = validateDocumentId(params);
-    if (!idValidation.success) {
+    const authCheck = checkAuthorization(locals);
+    if (!authCheck.authorized || !authCheck.userId) {
+      return authCheck.response as Response;
+    }
+
+    const documentId = params.id;
+    if (!documentId) {
       return new Response(
         JSON.stringify({
-          error: "Nieprawidłowe ID dokumentu",
-          details: idValidation.error,
-          validationErrors: "details" in idValidation ? idValidation.details : undefined,
+          error: {
+            code: "MISSING_PARAMETER",
+            message: "Brak wymaganego parametru",
+            details: "ID dokumentu jest wymagane",
+          },
         }),
         {
           status: 400,
@@ -46,20 +30,18 @@ export const GET: APIRoute = async ({ params, locals }) => {
       );
     }
 
-    const documentsService = new DocumentsService(locals.supabase);
+    const documentsService = new DocumentsService(locals.supabase, authCheck.userId);
 
     try {
-      const document = await documentsService.getDocumentById(idValidation.id);
-      return new Response(JSON.stringify(document), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    } catch (error) {
-      if (error instanceof Error && error.message === "Dokument nie istnieje") {
+      const document = await documentsService.getDocumentById(documentId);
+      if (!document) {
         return new Response(
           JSON.stringify({
-            error: "Nie znaleziono dokumentu",
-            details: "Dokument o podanym ID nie istnieje",
+            error: {
+              code: "NOT_FOUND",
+              message: "Dokument nie został znaleziony",
+              details: `Nie znaleziono dokumentu o ID: ${documentId}`,
+            },
           }),
           {
             status: 404,
@@ -68,11 +50,19 @@ export const GET: APIRoute = async ({ params, locals }) => {
         );
       }
 
-      logger.error(`Błąd podczas pobierania dokumentu ${idValidation.id}:`, error);
+      return new Response(JSON.stringify(document), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      logger.error(`Błąd podczas pobierania dokumentu ${documentId}:`, error);
       return new Response(
         JSON.stringify({
-          error: "Wystąpił błąd podczas pobierania dokumentu",
-          details: error instanceof Error ? error.message : "Nieznany błąd",
+          error: {
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Wystąpił błąd podczas pobierania dokumentu",
+            details: error instanceof Error ? error.message : "Nieznany błąd",
+          },
         }),
         {
           status: 500,
@@ -84,8 +74,11 @@ export const GET: APIRoute = async ({ params, locals }) => {
     logger.error("Nieoczekiwany błąd podczas przetwarzania żądania GET:", error);
     return new Response(
       JSON.stringify({
-        error: "Wystąpił nieoczekiwany błąd",
-        details: error instanceof Error ? error.message : "Nieznany błąd",
+        error: {
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Wystąpił nieoczekiwany błąd",
+          details: error instanceof Error ? error.message : "Nieznany błąd",
+        },
       }),
       {
         status: 500,
@@ -95,14 +88,22 @@ export const GET: APIRoute = async ({ params, locals }) => {
   }
 };
 
-export const PUT: APIRoute = async ({ request, params, locals }) => {
+export const PUT: APIRoute = async ({ params, request, locals }): Promise<Response> => {
   try {
-    const idValidation = validateDocumentId(params);
-    if (!idValidation.success) {
+    const authCheck = checkAuthorization(locals);
+    if (!authCheck.authorized || !authCheck.userId) {
+      return authCheck.response as Response;
+    }
+
+    const documentId = params.id;
+    if (!documentId) {
       return new Response(
         JSON.stringify({
-          error: "Nieprawidłowe ID dokumentu",
-          details: idValidation.error,
+          error: {
+            code: "MISSING_PARAMETER",
+            message: "Brak wymaganego parametru",
+            details: "ID dokumentu jest wymagane",
+          },
         }),
         {
           status: 400,
@@ -111,11 +112,15 @@ export const PUT: APIRoute = async ({ request, params, locals }) => {
       );
     }
 
-    if (!request.headers.get("Content-Type")?.includes("application/json")) {
+    const contentType = request.headers.get("Content-Type");
+    if (!contentType?.includes("application/json")) {
       return new Response(
         JSON.stringify({
-          error: "Nieprawidłowy format danych",
-          details: "Wymagany Content-Type: application/json",
+          error: {
+            code: "INVALID_CONTENT_TYPE",
+            message: "Nieprawidłowy format danych",
+            details: "Wymagany Content-Type: application/json",
+          },
         }),
         {
           status: 415,
@@ -130,8 +135,11 @@ export const PUT: APIRoute = async ({ request, params, locals }) => {
     } catch {
       return new Response(
         JSON.stringify({
-          error: "Nieprawidłowy format JSON",
-          details: "Nie można sparsować body requestu",
+          error: {
+            code: "INVALID_JSON",
+            message: "Nieprawidłowy format JSON",
+            details: "Nie można sparsować body requestu",
+          },
         }),
         {
           status: 400,
@@ -144,8 +152,11 @@ export const PUT: APIRoute = async ({ request, params, locals }) => {
     if (!validationResult.success) {
       return new Response(
         JSON.stringify({
-          error: "Nieprawidłowe dane wejściowe",
-          details: validationResult.error.errors,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Nieprawidłowe dane wejściowe",
+            details: validationResult.error.format(),
+          },
         }),
         {
           status: 400,
@@ -154,20 +165,39 @@ export const PUT: APIRoute = async ({ request, params, locals }) => {
       );
     }
 
-    const documentsService = new DocumentsService(locals.supabase);
+    const documentsService = new DocumentsService(locals.supabase, authCheck.userId);
 
     try {
-      const document = await documentsService.updateDocument(idValidation.id, validationResult.data);
+      const document = await documentsService.updateDocument(documentId, validationResult.data);
+      if (!document) {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: "NOT_FOUND",
+              message: "Dokument nie został znaleziony",
+              details: `Nie znaleziono dokumentu o ID: ${documentId}`,
+            },
+          }),
+          {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
       return new Response(JSON.stringify(document), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
     } catch (error) {
-      logger.error(`Błąd podczas aktualizacji dokumentu ${idValidation.id}:`, error);
+      logger.error(`Błąd podczas aktualizacji dokumentu ${documentId}:`, error);
       return new Response(
         JSON.stringify({
-          error: "Wystąpił błąd podczas aktualizacji dokumentu",
-          details: error instanceof Error ? error.message : "Nieznany błąd",
+          error: {
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Wystąpił błąd podczas aktualizacji dokumentu",
+            details: error instanceof Error ? error.message : "Nieznany błąd",
+          },
         }),
         {
           status: 500,
@@ -179,8 +209,11 @@ export const PUT: APIRoute = async ({ request, params, locals }) => {
     logger.error("Nieoczekiwany błąd podczas przetwarzania żądania PUT:", error);
     return new Response(
       JSON.stringify({
-        error: "Wystąpił nieoczekiwany błąd",
-        details: error instanceof Error ? error.message : "Nieznany błąd",
+        error: {
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Wystąpił nieoczekiwany błąd",
+          details: error instanceof Error ? error.message : "Nieznany błąd",
+        },
       }),
       {
         status: 500,
@@ -190,14 +223,22 @@ export const PUT: APIRoute = async ({ request, params, locals }) => {
   }
 };
 
-export const DELETE: APIRoute = async ({ params, locals }) => {
+export const DELETE: APIRoute = async ({ params, locals }): Promise<Response> => {
   try {
-    const idValidation = validateDocumentId(params);
-    if (!idValidation.success) {
+    const authCheck = checkAuthorization(locals);
+    if (!authCheck.authorized || !authCheck.userId) {
+      return authCheck.response as Response;
+    }
+
+    const documentId = params.id;
+    if (!documentId) {
       return new Response(
         JSON.stringify({
-          error: "Nieprawidłowe ID dokumentu",
-          details: idValidation.error,
+          error: {
+            code: "MISSING_PARAMETER",
+            message: "Brak wymaganego parametru",
+            details: "ID dokumentu jest wymagane",
+          },
         }),
         {
           status: 400,
@@ -206,20 +247,22 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
       );
     }
 
-    const documentsService = new DocumentsService(locals.supabase);
+    const documentsService = new DocumentsService(locals.supabase, authCheck.userId);
 
     try {
-      await documentsService.deleteDocument(idValidation.id);
-      return new Response(JSON.stringify({ message: "Dokument został pomyślnie usunięty" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
+      await documentsService.deleteDocument(documentId);
+      return new Response(null, {
+        status: 204,
       });
     } catch (error) {
-      logger.error(`Błąd podczas usuwania dokumentu ${idValidation.id}:`, error);
+      logger.error(`Błąd podczas usuwania dokumentu ${documentId}:`, error);
       return new Response(
         JSON.stringify({
-          error: "Wystąpił błąd podczas usuwania dokumentu",
-          details: error instanceof Error ? error.message : "Nieznany błąd",
+          error: {
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Wystąpił błąd podczas usuwania dokumentu",
+            details: error instanceof Error ? error.message : "Nieznany błąd",
+          },
         }),
         {
           status: 500,
@@ -231,8 +274,11 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     logger.error("Nieoczekiwany błąd podczas przetwarzania żądania DELETE:", error);
     return new Response(
       JSON.stringify({
-        error: "Wystąpił nieoczekiwany błąd",
-        details: error instanceof Error ? error.message : "Nieznany błąd",
+        error: {
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Wystąpił nieoczekiwany błąd",
+          details: error instanceof Error ? error.message : "Nieznany błąd",
+        },
       }),
       {
         status: 500,

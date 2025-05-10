@@ -1,14 +1,20 @@
 import type { APIRoute } from "astro";
 import { AiGenerateService } from "../../../lib/services/ai-generate.service";
-import { flashcardAiRegenerateSchema } from "../../../lib/schemas/ai-regenerate.schema";
 import { logger } from "../../../lib/services/logger.service";
+import { checkAuthorization } from "../../../lib/services/auth.service";
+import { flashcardAiRegenerateSchema } from "../../../lib/schemas/ai-regenerate.schema";
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request, locals }): Promise<Response> => {
   try {
-    // Sprawdzanie nagłówka Content-Type
-    if (!request.headers.get("Content-Type")?.includes("application/json")) {
+    const authCheck = checkAuthorization(locals);
+    if (!authCheck.authorized || !authCheck.userId) {
+      return authCheck.response as Response;
+    }
+
+    const contentType = request.headers.get("Content-Type");
+    if (!contentType?.includes("application/json")) {
       return new Response(
         JSON.stringify({
           error: {
@@ -24,7 +30,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
 
-    // Parsowanie body requestu
     let body;
     try {
       body = await request.json();
@@ -44,11 +49,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
 
-    // Walidacja danych wejściowych
     const validationResult = flashcardAiRegenerateSchema.safeParse(body);
     if (!validationResult.success) {
-      logger.info("Nieprawidłowe dane wejściowe dla regeneracji fiszek AI:");
-      logger.error("Szczegóły błędów walidacji:", validationResult.error.errors);
       return new Response(
         JSON.stringify({
           error: {
@@ -59,62 +61,51 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }),
         {
           status: 400,
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
         }
       );
     }
 
-    // Inicjalizacja serwisu i regeneracja fiszek
-    const aiService = new AiGenerateService(locals.supabase);
-    const result = await aiService.regenerateFlashcards(validationResult.data);
+    const aiService = new AiGenerateService(locals.supabase, authCheck.userId);
 
-    logger.debug("Pomyślnie zregenerowano fiszki AI");
+    try {
+      const result = await aiService.regenerateFlashcards(validationResult.data);
 
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-  } catch (error) {
-    // Obsługa specyficznych błędów
-    if (error instanceof Error) {
-      if (error.message.includes("not found") || error.message.includes("nie znaleziono")) {
-        return new Response(
-          JSON.stringify({
-            error: {
-              code: "DOCUMENT_NOT_FOUND",
-              message: "Nie znaleziono dokumentu o podanym ID",
-              details: error.message,
-            },
-          }),
-          {
-            status: 404,
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-      }
+      logger.debug(`Wygenerowano ${result.flashcards.length} fiszek, usunięto ${result.deleted_count} starych fiszek`);
+
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      logger.error(`Błąd podczas generowania fiszek dla dokumentu ${validationResult.data.document_id}:`, error);
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Wystąpił błąd podczas generowania fiszek",
+            details: error instanceof Error ? error.message : "Nieznany błąd",
+          },
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
-
-    // Ogólna obsługa błędów
-    logger.error("Błąd podczas regenerowania fiszek AI:", error);
+  } catch (error) {
+    logger.error("Nieoczekiwany błąd podczas przetwarzania żądania POST:", error);
     return new Response(
       JSON.stringify({
         error: {
           code: "INTERNAL_SERVER_ERROR",
-          message: "Wystąpił błąd podczas regenerowania fiszek",
+          message: "Wystąpił nieoczekiwany błąd",
           details: error instanceof Error ? error.message : "Nieznany błąd",
         },
       }),
       {
         status: 500,
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       }
     );
   }

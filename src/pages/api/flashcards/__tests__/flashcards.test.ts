@@ -223,4 +223,4 @@ describe("Flashcards API", () => {
       expect(body.error).toBe("Nieprawidłowe dane wejściowe");
     });
   });
-}); 
+});

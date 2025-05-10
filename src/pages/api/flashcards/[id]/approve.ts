@@ -1,13 +1,18 @@
 import type { APIRoute } from "astro";
 import { FlashcardsService } from "../../../../lib/services/flashcards.service";
 import { logger } from "../../../../lib/services/logger.service";
-import { supabaseClient } from "../../../../db/supabase.client";
 import { flashcardIdSchema } from "../../../../lib/schemas/flashcards.schema";
+import { checkAuthorization } from "../../../../lib/services/auth.service";
 
 export const prerender = false;
 
-export const PATCH: APIRoute = async ({ params }) => {
+export const PATCH: APIRoute = async ({ params, locals }): Promise<Response> => {
   try {
+    const authCheck = checkAuthorization(locals);
+    if (!authCheck.authorized || !authCheck.userId) {
+      return authCheck.response as Response;
+    }
+
     // Walidacja ID fiszki
     if (!params.id) {
       return new Response(
@@ -47,10 +52,7 @@ export const PATCH: APIRoute = async ({ params }) => {
         );
       }
 
-      const flashcardsService = new FlashcardsService(supabaseClient);
-
-      // TODO: Po wdrożeniu Modułu II, użyć context.locals.supabase zamiast supabaseClient
-      // aby RLS działało poprawnie i sprawdzało przynależność fiszki do użytkownika
+      const flashcardsService = new FlashcardsService(locals.supabase, authCheck.userId);
       const flashcard = await flashcardsService.approveOne(validationResult.data);
 
       return new Response(

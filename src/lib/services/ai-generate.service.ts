@@ -1,5 +1,4 @@
-import type { SupabaseClient } from "../../db/supabase.client";
-import { DEFAULT_USER_ID } from "../../db/supabase.client";
+import type { SupabaseClient } from "@/db/supabase.client";
 import type {
   FlashcardAiGenerateDto,
   FlashcardAiResponse,
@@ -13,6 +12,7 @@ import { z } from "zod";
 import { OpenRouterService } from "./openrouter.service";
 import fs from "fs";
 import path from "path";
+import { openRouterConfig } from "../config/openrouter.config";
 
 interface AiFlashcard {
   front_original: string;
@@ -24,17 +24,12 @@ export class AiGenerateService {
   private openRouterService: OpenRouterService;
   private readonly systemPrompt: string;
 
-  constructor(private supabase: SupabaseClient) {
-    this.flashcardsService = new FlashcardsService(supabase);
-    const apiKey = import.meta.env.OPENROUTER_API_KEY;
-    if (!apiKey) {
-      throw new Error("OPENROUTER_API_KEY is not defined");
-    }
-    this.openRouterService = new OpenRouterService({
-      apiKey,
-      baseUrl: import.meta.env.OPENROUTER_BASE_URL,
-      defaultModel: import.meta.env.OPENROUTER_DEFAULT_MODEL,
-    });
+  constructor(
+    private supabase: SupabaseClient,
+    private readonly userId: string
+  ) {
+    this.flashcardsService = new FlashcardsService(supabase, userId);
+    this.openRouterService = new OpenRouterService(openRouterConfig);
 
     // Wczytanie promptu systemowego z pliku
     const promptPath = path.join(process.cwd(), "src/lib/prompts/generate-flashcards.md");
@@ -48,10 +43,9 @@ export class AiGenerateService {
 
   private async saveFlashcards(flashcards: FlashcardProposalDto[]): Promise<void> {
     try {
-      // Na etapie developmentu używamy DEFAULT_USER_ID
       const flashcardsWithUser = flashcards.map((flashcard) => ({
         ...flashcard,
-        user_id: DEFAULT_USER_ID,
+        user_id: this.userId,
         // Kopiowanie wartości z pól _original do pól _modified
         front_modified: flashcard.front_original,
         back_modified: flashcard.back_original,

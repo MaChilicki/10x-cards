@@ -1,151 +1,311 @@
 import type { APIRoute } from "astro";
 import { FlashcardsService } from "../../../lib/services/flashcards.service";
-import { FlashcardModificationService } from "../../../lib/services/flashcard-modification.service";
 import { flashcardUpdateSchema } from "../../../lib/schemas/flashcards.schema";
-import type { FlashcardSource } from "../../../types";
 import { logger } from "../../../lib/services/logger.service";
-import { supabaseClient } from "../../../db/supabase.client";
+import { checkAuthorization } from "../../../lib/services/auth.service";
+import type { FlashcardUpdateDto } from "@/types";
 
 export const prerender = false;
 
-const flashcardsService = new FlashcardsService(supabaseClient);
-const modificationService = new FlashcardModificationService();
-
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, locals }): Promise<Response> => {
   try {
-    if (!params.id) {
+    const authCheck = checkAuthorization(locals);
+    if (!authCheck.authorized || !authCheck.userId) {
+      return authCheck.response as Response;
+    }
+
+    const flashcardId = params.id;
+    if (!flashcardId) {
       return new Response(
         JSON.stringify({
-          error: "Nie podano identyfikatora fiszki",
+          error: {
+            code: "MISSING_PARAMETER",
+            message: "Brak wymaganego parametru",
+            details: "ID fiszki jest wymagane",
+          },
         }),
         {
           status: 400,
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
         }
       );
     }
 
-    const flashcard = await flashcardsService.getFlashcardById(params.id);
+    const flashcardsService = new FlashcardsService(locals.supabase, authCheck.userId);
 
-    if (!flashcard) {
+    try {
+      const flashcard = await flashcardsService.getFlashcardById(flashcardId);
+      if (!flashcard) {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: "NOT_FOUND",
+              message: "Fiszka nie została znaleziona",
+              details: `Nie znaleziono fiszki o ID: ${flashcardId}`,
+            },
+          }),
+          {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      return new Response(JSON.stringify(flashcard), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      logger.error(`Błąd podczas pobierania fiszki ${flashcardId}:`, error);
       return new Response(
         JSON.stringify({
-          error: "Nie znaleziono fiszki o podanym identyfikatorze",
+          error: {
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Wystąpił błąd podczas pobierania fiszki",
+            details: error instanceof Error ? error.message : "Nieznany błąd",
+          },
         }),
         {
-          status: 404,
-          headers: {
-            "Content-Type": "application/json",
-          },
+          status: 500,
+          headers: { "Content-Type": "application/json" },
         }
       );
     }
-
-    return new Response(
-      JSON.stringify({
-        data: flashcard,
-      }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
   } catch (error) {
-    logger.error("Błąd podczas pobierania fiszki:", error);
-
+    logger.error("Nieoczekiwany błąd podczas przetwarzania żądania GET:", error);
     return new Response(
       JSON.stringify({
-        error: "Wystąpił błąd podczas przetwarzania żądania",
+        error: {
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Wystąpił nieoczekiwany błąd",
+          details: error instanceof Error ? error.message : "Nieznany błąd",
+        },
       }),
       {
         status: 500,
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       }
     );
   }
 };
 
-export const PUT: APIRoute = async ({ params, request }) => {
+export const PUT: APIRoute = async ({ params, request, locals }): Promise<Response> => {
   try {
-    const { id } = params;
-    if (!id) {
-      return new Response(JSON.stringify({ error: "Nie podano identyfikatora fiszki" }), { status: 400 });
+    const authCheck = checkAuthorization(locals);
+    if (!authCheck.authorized || !authCheck.userId) {
+      return authCheck.response as Response;
     }
 
-    const flashcard = await flashcardsService.getFlashcardById(id);
-    if (!flashcard) {
-      return new Response(JSON.stringify({ error: "Nie znaleziono fiszki o podanym identyfikatorze" }), {
-        status: 404,
-      });
+    const flashcardId = params.id;
+    if (!flashcardId) {
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "MISSING_PARAMETER",
+            message: "Brak wymaganego parametru",
+            details: "ID fiszki jest wymagane",
+          },
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
-    const body = await request.json();
+    const contentType = request.headers.get("Content-Type");
+    if (!contentType?.includes("application/json")) {
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "INVALID_CONTENT_TYPE",
+            message: "Nieprawidłowy format danych",
+            details: "Wymagany Content-Type: application/json",
+          },
+        }),
+        {
+          status: 415,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    let body: FlashcardUpdateDto;
+    try {
+      body = await request.json();
+    } catch {
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "INVALID_JSON",
+            message: "Nieprawidłowy format JSON",
+            details: "Nie można sparsować body requestu",
+          },
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const validationResult = flashcardUpdateSchema.safeParse(body);
     if (!validationResult.success) {
       return new Response(
         JSON.stringify({
-          error: "Nieprawidłowe dane wejściowe",
-          details: validationResult.error.format(),
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Nieprawidłowe dane wejściowe",
+            details: validationResult.error.format(),
+          },
         }),
-        { status: 400 }
-      );
-    }
-
-    const modificationPercentage =
-      flashcard.source === "ai"
-        ? modificationService.calculateModificationPercentage(flashcard, validationResult.data)
-        : 0;
-
-    const result = await flashcardsService.updateFlashcard(id, validationResult.data, modificationPercentage);
-
-    return new Response(
-      JSON.stringify({
-        message: "Pomyślnie zaktualizowano fiszkę",
-        data: result,
-      }),
-      { status: 200 }
-    );
-  } catch (error) {
-    logger.error("Błąd podczas aktualizacji fiszki:", error);
-    return new Response(JSON.stringify({ error: "Wystąpił błąd podczas aktualizacji fiszki" }), { status: 500 });
-  }
-};
-
-export const DELETE: APIRoute = async ({ params, request }) => {
-  try {
-    const { id } = params;
-    if (!id) {
-      return new Response(JSON.stringify({ error: "Nie podano identyfikatora fiszki" }), { status: 400 });
-    }
-
-    const body = await request.json();
-    if (!body.source || !["ai", "manual"].includes(body.source)) {
-      return new Response(JSON.stringify({ error: "Nieprawidłowy parametr source. Dozwolone wartości: ai, manual" }), {
-        status: 400,
-      });
-    }
-
-    const flashcard = await flashcardsService.getFlashcardById(id);
-    if (!flashcard) {
-      return new Response(
-        JSON.stringify({ error: "Nie znaleziono fiszki o podanym identyfikatorze lub jest już wyłączona" }),
         {
-          status: 404,
+          status: 400,
+          headers: { "Content-Type": "application/json" },
         }
       );
     }
 
-    await flashcardsService.deleteFlashcard(id, body.source as FlashcardSource);
+    const flashcardsService = new FlashcardsService(locals.supabase, authCheck.userId);
 
-    return new Response(JSON.stringify({ message: `Pomyślnie usunięto fiszkę` }), { status: 200 });
+    try {
+      const result = await flashcardsService.updateFlashcard(flashcardId, validationResult.data, 0);
+      const flashcard = result.flashcard;
+
+      if (!flashcard) {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: "NOT_FOUND",
+              message: "Fiszka nie została znaleziona",
+              details: `Nie znaleziono fiszki o ID: ${flashcardId}`,
+            },
+          }),
+          {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      return new Response(JSON.stringify(flashcard), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      logger.error(`Błąd podczas aktualizacji fiszki ${flashcardId}:`, error);
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Wystąpił błąd podczas aktualizacji fiszki",
+            details: error instanceof Error ? error.message : "Nieznany błąd",
+          },
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
   } catch (error) {
-    logger.error("Błąd podczas usuwania fiszki:", error);
-    return new Response(JSON.stringify({ error: "Wystąpił błąd podczas usuwania fiszki" }), { status: 500 });
+    logger.error("Nieoczekiwany błąd podczas przetwarzania żądania PUT:", error);
+    return new Response(
+      JSON.stringify({
+        error: {
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Wystąpił nieoczekiwany błąd",
+          details: error instanceof Error ? error.message : "Nieznany błąd",
+        },
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+};
+
+export const DELETE: APIRoute = async ({ params, locals }): Promise<Response> => {
+  try {
+    const authCheck = checkAuthorization(locals);
+    if (!authCheck.authorized || !authCheck.userId) {
+      return authCheck.response as Response;
+    }
+
+    const flashcardId = params.id;
+    if (!flashcardId) {
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "MISSING_PARAMETER",
+            message: "Brak wymaganego parametru",
+            details: "ID fiszki jest wymagane",
+          },
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const flashcardsService = new FlashcardsService(locals.supabase, authCheck.userId);
+
+    try {
+      // Najpierw pobieramy fiszkę, aby sprawdzić jej source
+      const flashcard = await flashcardsService.getFlashcardById(flashcardId);
+      if (!flashcard) {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: "NOT_FOUND",
+              message: "Fiszka nie została znaleziona",
+              details: `Nie znaleziono fiszki o ID: ${flashcardId}`,
+            },
+          }),
+          {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      await flashcardsService.deleteFlashcard(flashcardId, flashcard.source);
+
+      return new Response(null, {
+        status: 204,
+      });
+    } catch (error) {
+      logger.error(`Błąd podczas usuwania fiszki ${flashcardId}:`, error);
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Wystąpił błąd podczas usuwania fiszki",
+            details: error instanceof Error ? error.message : "Nieznany błąd",
+          },
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+  } catch (error) {
+    logger.error("Nieoczekiwany błąd podczas przetwarzania żądania DELETE:", error);
+    return new Response(
+      JSON.stringify({
+        error: {
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Wystąpił nieoczekiwany błąd",
+          details: error instanceof Error ? error.message : "Nieznany błąd",
+        },
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 };

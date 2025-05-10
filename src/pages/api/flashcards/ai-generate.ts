@@ -1,13 +1,20 @@
 import type { APIRoute } from "astro";
 import { AiGenerateService } from "../../../lib/services/ai-generate.service";
-import { flashcardAiGenerateSchema } from "../../../lib/schemas/ai-generate.schema";
 import { logger } from "../../../lib/services/logger.service";
+import { checkAuthorization } from "../../../lib/services/auth.service";
+import { flashcardAiGenerateSchema } from "../../../lib/schemas/ai-generate.schema";
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request, locals }): Promise<Response> => {
   try {
-    if (!request.headers.get("Content-Type")?.includes("application/json")) {
+    const authCheck = checkAuthorization(locals);
+    if (!authCheck.authorized || !authCheck.userId) {
+      return authCheck.response as Response;
+    }
+
+    const contentType = request.headers.get("Content-Type");
+    if (!contentType?.includes("application/json")) {
       return new Response(
         JSON.stringify({
           error: {
@@ -42,11 +49,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
 
-    // Walidacja danych wejściowych
     const validationResult = flashcardAiGenerateSchema.safeParse(body);
     if (!validationResult.success) {
-      logger.info("Nieprawidłowe dane wejściowe dla generacji fiszek AI:");
-      logger.error("Szczegóły błędów walidacji:", validationResult.error.errors);
       return new Response(
         JSON.stringify({
           error: {
@@ -57,40 +61,53 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }),
         {
           status: 400,
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
         }
       );
     }
 
-    // Inicjalizacja serwisu i generacja fiszek
-    const aiService = new AiGenerateService(locals.supabase);
-    const result = await aiService.generateFlashcards(validationResult.data);
+    const aiService = new AiGenerateService(locals.supabase, authCheck.userId);
 
-    logger.debug("Pomyślnie wygenerowano fiszki AI");
-
-    return new Response(JSON.stringify(result), {
-      status: 201,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    try {
+      await aiService.generateFlashcards(validationResult.data);
+      return new Response(
+        JSON.stringify({
+          message: "Fiszki zostały pomyślnie wygenerowane",
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    } catch (error) {
+      logger.error(`Błąd podczas generowania fiszek dla dokumentu ${validationResult.data.document_id}:`, error);
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Wystąpił błąd podczas generowania fiszek",
+            details: error instanceof Error ? error.message : "Nieznany błąd",
+          },
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
   } catch (error) {
-    logger.error("Błąd podczas generowania fiszek AI:", error);
+    logger.error("Nieoczekiwany błąd podczas przetwarzania żądania POST:", error);
     return new Response(
       JSON.stringify({
         error: {
           code: "INTERNAL_SERVER_ERROR",
-          message: "Wystąpił błąd podczas generowania fiszek",
+          message: "Wystąpił nieoczekiwany błąd",
           details: error instanceof Error ? error.message : "Nieznany błąd",
         },
       }),
       {
         status: 500,
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       }
     );
   }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "@/lib/hooks/use-navigate";
+import { useNavigate } from "@/components/hooks/use-navigate";
 
 interface ConfirmDialogState {
   isOpen: boolean;

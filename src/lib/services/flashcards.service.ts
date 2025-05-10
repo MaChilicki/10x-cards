@@ -1,5 +1,4 @@
-import type { SupabaseClient } from "../../db/supabase.client";
-import { DEFAULT_USER_ID } from "../../db/supabase.client";
+import type { SupabaseClient } from "@/db/supabase.client";
 import type {
   FlashcardDto,
   FlashcardsListResponseDto,
@@ -18,7 +17,10 @@ import { FlashcardModificationService } from "./flashcard-modification.service";
 export class FlashcardsService {
   private modificationService: FlashcardModificationService;
 
-  constructor(private readonly supabase: SupabaseClient) {
+  constructor(
+    private readonly supabase: SupabaseClient,
+    private readonly userId: string
+  ) {
     this.modificationService = new FlashcardModificationService();
   }
 
@@ -184,7 +186,7 @@ export class FlashcardsService {
       const { error } = await this.supabase.from("flashcards").insert(
         flashcards.map((flashcard) => ({
           ...flashcard,
-          user_id: DEFAULT_USER_ID, // Tymczasowo, zostanie zastąpione przez Supabase Auth
+          user_id: this.userId,
           front_modified: flashcard.front_original,
           back_modified: flashcard.back_original,
           is_modified: false,
@@ -272,7 +274,7 @@ export class FlashcardsService {
           is_approved: true,
           is_modified: false,
           is_disabled: false,
-          user_id: DEFAULT_USER_ID, // Tymczasowo, zostanie zastąpione przez Supabase Auth
+          user_id: this.userId,
           created_at: originalFlashcard.created_at, // Kopiujemy datę utworzenia z oryginalnej fiszki
         };
 

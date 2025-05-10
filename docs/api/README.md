@@ -6,6 +6,7 @@ Dokumentacja API jest napisana w formacie OpenAPI (Swagger) 3.0.0. Zawiera szcze
 
 ## Struktura
 
+- `auth.yaml` - Dokumentacja API dla endpointów autoryzacji
 - `documents.yaml` - Dokumentacja API dla endpointów zarządzania dokumentami
 - `flashcards.yaml` - Dokumentacja API dla endpointów zarządzania fiszkami
 - `topics.yaml` - Dokumentacja API dla endpointów zarządzania tematami
@@ -28,6 +29,9 @@ Dokumentacja API jest napisana w formacie OpenAPI (Swagger) 3.0.0. Zawiera szcze
 
 2. Uruchom UI dla wybranego API:
    ```bash
+   # Dla autoryzacji
+   swagger-ui-cli serve auth.yaml
+
    # Dla dokumentów
    swagger-ui-cli serve documents.yaml
 
@@ -41,6 +45,15 @@ Dokumentacja API jest napisana w formacie OpenAPI (Swagger) 3.0.0. Zawiera szcze
 3. Otwórz przeglądarkę pod adresem: http://localhost:8080
 
 ## Endpointy
+
+### Autoryzacja (Auth)
+
+- `POST /api/auth/login` - Logowanie użytkownika
+- `POST /api/auth/register` - Rejestracja nowego użytkownika
+- `POST /api/auth/logout` - Wylogowanie użytkownika
+- `POST /api/auth/reset-password` - Wysłanie linku do resetowania hasła
+- `POST /api/auth/change-password` - Zmiana hasła użytkownika
+- `GET /api/auth/me` - Pobranie informacji o zalogowanym użytkowniku
 
 ### Dokumenty (Documents)
 
@@ -71,6 +84,10 @@ Dokumentacja API jest napisana w formacie OpenAPI (Swagger) 3.0.0. Zawiera szcze
 
 ## Modele danych
 
+### User
+
+Model reprezentujący użytkownika w systemie.
+
 ### Document
 
 Główny model reprezentujący dokument w systemie.
@@ -96,6 +113,7 @@ Model reprezentujący odpowiedź z błędem.
 - `200` - Sukces
 - `201` - Zasób utworzony
 - `400` - Nieprawidłowe żądanie
+- `401` - Brak autoryzacji
 - `404` - Zasób nie znaleziony
 - `409` - Konflikt (np. zasób już istnieje)
 - `415` - Nieprawidłowy format danych
@@ -106,3 +124,5 @@ Model reprezentujący odpowiedź z błędem.
 - Wszystkie endpointy wymagają nagłówka `Content-Type: application/json`
 - Daty są zwracane w formacie ISO 8601
 - UUID są używane jako identyfikatory zasobów 
+- Autoryzacja oparta jest na tokenach JWT przechowywanych w httpOnly cookie
+- Wymagana jest weryfikacja emaila przed dostępem do chronionych funkcji 
