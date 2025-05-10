@@ -10,7 +10,7 @@ interface AuthCardProps {
 
 export function AuthCard({ title, description, children, footer }: AuthCardProps) {
   return (
-    <Card>
+    <Card className="cursor-default">
       <CardHeader className="flex flex-col items-center">
         <img src="/logo.svg" alt={`${APP_CONSTANTS.name} Logo`} className="w-24 h-24 mb-4" />
         <CardTitle>{title}</CardTitle>

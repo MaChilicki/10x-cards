@@ -15,7 +15,7 @@ interface TopicCardProps {
 
 export function TopicCard({ topic, onTopicClick, onEditClick, onDeleteClick }: TopicCardProps) {
   return (
-    <Card className="cursor-pointer hover:bg-accent/5">
+    <Card className="hover:bg-accent/5">
       <CardHeader className="relative">
         <div className="absolute right-6 top-6 flex gap-2">
           <TooltipProvider>

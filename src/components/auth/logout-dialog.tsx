@@ -77,10 +77,10 @@ export function LogoutDialog({ isOpen, onClose, onConfirm, hasUnsavedChanges = f
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isLoading}>
+          <Button variant="outline" onClick={onClose} disabled={isLoading} aria-busy={isLoading}>
             Anuluj
           </Button>
-          <Button variant="destructive" onClick={handleLogout} disabled={isLoading}>
+          <Button variant="destructive" onClick={handleLogout} disabled={isLoading} aria-busy={isLoading}>
             {isLoading ? "Wylogowywanie..." : "Wyloguj"}
           </Button>
         </DialogFooter>

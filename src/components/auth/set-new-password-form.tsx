@@ -44,6 +44,32 @@ export function SetNewPasswordForm() {
     };
   }, []);
 
+  // Obsługa wygaśnięcia sesji
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      logger.warn("Sesja wygasła podczas resetowania hasła");
+      toast.error("Sesja wygasła. Rozpocznij proces resetowania hasła od nowa.");
+
+      // Resetujemy stan formularza
+      if (formInstance) {
+        formInstance.reset();
+      }
+
+      // Resetujemy stan komponentu
+      setIsVerifying(true);
+      setVerificationError(null);
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+
+      // Przekierowujemy do strony resetowania hasła
+      window.location.href = "/reset-password";
+    };
+
+    window.addEventListener("session-expired", handleSessionExpired);
+    return () => window.removeEventListener("session-expired", handleSessionExpired);
+  }, [formInstance, setPassword]);
+
   // Efekt weryfikacji tokenu
   useEffect(() => {
     const verifyToken = async () => {
@@ -65,70 +91,63 @@ export function SetNewPasswordForm() {
         logger.info(`Pobrano token z URL: ${token}`);
         logger.debug("Weryfikacja tokenu przez API...");
 
-        try {
-          // Próbujemy zweryfikować token
-          const { email: verifiedEmail } = await verifyResetToken(token);
+        // Próbujemy zweryfikować token
+        const { email: verifiedEmail } = await verifyResetToken(token);
 
-          if (isMountedRef.current) {
-            if (verifiedEmail) {
-              logger.info(`Token zweryfikowany pomyślnie dla: ${verifiedEmail}`);
-              setEmail(verifiedEmail);
-              setIsVerifying(false);
-            } else {
-              logger.error("Token zweryfikowany, ale brak emaila w odpowiedzi");
-              throw new Error("Nie udało się pobrać adresu email");
-            }
-          }
-        } catch (apiError) {
-          if (!isMountedRef.current) return;
-
-          logger.error("Błąd weryfikacji tokenu przez API", { error: apiError });
-
-          // Sprawdzamy czy błąd zawiera szczegółowe informacje
-          const errorDetails = apiError instanceof Error ? apiError.cause : null;
-          const errorData =
-            errorDetails && typeof errorDetails === "object" ? (errorDetails as Record<string, unknown>) : null;
-
-          if (errorData) {
-            logger.debug(`Szczegóły błędu API: ${JSON.stringify(errorData)}`);
-
-            // Obsługa konkretnych kodów błędów
-            switch (errorData.code) {
-              case "AUTH_SESSION_MISSING":
-                setVerificationError(
-                  "Sesja logowania wygasła. Proszę spróbować zresetować hasło ponownie lub zalogować się."
-                );
-                break;
-              case "TOKEN_VERIFICATION_ERROR":
-              case "EMAIL_LINK_INVALID":
-              case "EMAIL_LINK_EXPIRED":
-                setVerificationError(
-                  "Link do resetowania hasła wygasł lub jest nieprawidłowy. Proszę spróbować zresetować hasło ponownie."
-                );
-                break;
-              case "MANUAL_EMAIL_REQUIRED":
-                setVerificationError(null);
-                break;
-              default:
-                setVerificationError("Wystąpił błąd podczas weryfikacji. Proszę spróbować ponownie za chwilę.");
-            }
+        if (isMountedRef.current) {
+          if (verifiedEmail) {
+            logger.info(`Token zweryfikowany pomyślnie dla: ${verifiedEmail}`);
+            setEmail(verifiedEmail);
+            setIsVerifying(false);
           } else {
-            setVerificationError("Nie można zweryfikować tokenu. Proszę spróbować zresetować hasło ponownie.");
+            logger.error("Token zweryfikowany, ale brak emaila w odpowiedzi");
+            throw new Error("Nie udało się pobrać adresu email");
           }
-
-          setEmail("");
-          setIsVerifying(false);
         }
       } catch (error) {
-        if (isMountedRef.current) {
-          logger.error(`Błąd podczas weryfikacji tokenu: ${error instanceof Error ? error.message : "Nieznany błąd"}`);
-          if (!verificationError) {
-            setVerificationError(
-              "Wystąpił nieoczekiwany błąd. Proszę spróbować ponownie za chwilę lub skontaktować się z administratorem."
-            );
+        if (!isMountedRef.current) return;
+
+        logger.error("Błąd weryfikacji tokenu przez API", { error });
+
+        // Sprawdzamy czy błąd zawiera szczegółowe informacje
+        const errorDetails = error instanceof Error ? error.cause : null;
+        const errorData =
+          errorDetails && typeof errorDetails === "object" ? (errorDetails as Record<string, unknown>) : null;
+
+        if (errorData) {
+          logger.debug(`Szczegóły błędu API: ${JSON.stringify(errorData)}`);
+
+          // Obsługa konkretnych kodów błędów
+          switch (errorData.code) {
+            case "AUTH_SESSION_MISSING":
+              setVerificationError(
+                "Sesja logowania wygasła. Proszę spróbować zresetować hasło ponownie lub zalogować się."
+              );
+              break;
+            case "TOKEN_VERIFICATION_ERROR":
+            case "EMAIL_LINK_INVALID":
+            case "EMAIL_LINK_EXPIRED":
+              setVerificationError(
+                "Link do resetowania hasła wygasł lub jest nieprawidłowy. Proszę spróbować zresetować hasło ponownie."
+              );
+              break;
+            case "MANUAL_EMAIL_REQUIRED":
+              setVerificationError(null);
+              break;
+            default:
+              setVerificationError("Wystąpił błąd podczas weryfikacji. Proszę spróbować ponownie za chwilę.");
           }
-          setEmail("");
-          setIsVerifying(false);
+        } else {
+          setVerificationError("Nie można zweryfikować tokenu. Proszę spróbować zresetować hasło ponownie.");
+        }
+
+        setEmail("");
+        setIsVerifying(false);
+
+        if (!verificationError) {
+          setVerificationError(
+            "Wystąpił nieoczekiwany błąd. Proszę spróbować ponownie za chwilę lub skontaktować się z administratorem."
+          );
         }
       }
     };

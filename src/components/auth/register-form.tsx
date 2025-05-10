@@ -48,8 +48,8 @@ export function RegisterForm() {
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Sprawdzamy czy formularz jest brudny i nie jest w trakcie wysyłania
-      if (formInstance?.formState.isDirty && !isSubmitting) {
+      // Sprawdzamy czy formularz jest brudny i nie jest w trakcie wysyłania ani nie został pomyślnie wysłany
+      if (formInstance?.formState.isDirty && !isSubmitting && !isSuccess) {
         e.preventDefault();
         e.returnValue = "";
       }
@@ -57,7 +57,7 @@ export function RegisterForm() {
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [isSubmitting, formInstance]);
+  }, [isSubmitting, formInstance, isSuccess]);
 
   useEffect(() => {
     const handleSessionExpired = () => {

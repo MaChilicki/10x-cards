@@ -18,7 +18,7 @@ export function DocumentCard({ document, onDelete, onEdit, unapproved_flashcards
   const navigate = useNavigate();
 
   return (
-    <Card key={document.id} className="cursor-pointer hover:bg-accent/5">
+    <Card key={document.id} className="hover:bg-accent/5">
       <CardHeader className="relative">
         <div className="absolute right-6 top-6 flex gap-2">
           <TooltipProvider>

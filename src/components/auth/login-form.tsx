@@ -19,7 +19,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { refreshSession } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const [formInstance, setFormInstance] = useState<UseFormReturn<LoginFormValues> | null>(null);
 
@@ -39,54 +39,9 @@ export function LoginForm() {
       setIsSubmitting(true);
       logger.info("Próba logowania użytkownika");
 
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          if (result.error?.code === "INVALID_CREDENTIALS") {
-            throw new Error("Nieprawidłowy email lub hasło");
-          }
-          window.dispatchEvent(new Event("session-expired"));
-          return;
-        }
-
-        // Obsługa błędów walidacji
-        if (response.status === 400) {
-          if (result.error?.code === "VALIDATION_ERROR" && result.error?.details && formInstance) {
-            Object.entries(result.error.details).forEach(([field, errors]) => {
-              if (formInstance.formState.errors[field as keyof LoginFormValues]) {
-                formInstance.setError(field as keyof LoginFormValues, {
-                  message: Array.isArray(errors) ? errors[0] : String(errors),
-                });
-              }
-            });
-            throw new Error("Popraw błędy w formularzu");
-          }
-
-          if (result.error?.code === "SIGN_IN_ERROR") {
-            throw new Error("Nieprawidłowy email lub hasło");
-          }
-        }
-
-        // Obsługa błędów autoryzacji
-        if (response.status === 403) {
-          if (result.error?.code === "EMAIL_NOT_VERIFIED") {
-            throw new Error("Email nie został zweryfikowany. Sprawdź swoją skrzynkę email.");
-          }
-          throw new Error("Brak dostępu. Sprawdź czy Twoje konto jest aktywne.");
-        }
-
-        // Obsługa innych błędów
-        throw new Error(result.error?.message || "Nieprawidłowy email lub hasło");
-      }
+      // Używamy funkcji signIn z hooka useAuth zamiast bezpośredniego fetch
+      // Przekazujemy formInstance do obsługi błędów walidacji
+      const result = await signIn(data, formInstance || undefined);
 
       if (!result.success) {
         throw new Error("Nieprawidłowy email lub hasło");
@@ -94,39 +49,14 @@ export function LoginForm() {
 
       logger.info("Zalogowano użytkownika");
 
-      try {
-        // Odświeżamy sesję przed przekierowaniem
-        await refreshSession();
-        // Kontynuujemy niezależnie od wyniku odświeżania, jeśli mamy dane użytkownika z API
-
-        // Sprawdzamy czy email jest zweryfikowany
-        if (result.user && !result.user.email_verified) {
-          navigate("/auth/verify-email");
-          return;
-        }
-
-        // Przekierowujemy do strony głównej
-        navigate("/");
-      } catch (error) {
-        logger.error("Błąd podczas odświeżania sesji", { error });
-
-        // Jeśli błąd dotyczy braku sesji, ale mamy dane użytkownika z API, kontynuujemy
-        if (error instanceof Error && error.message.includes("Auth session missing") && result.user) {
-          logger.info("Kontynuuję mimo błędu sesji, ponieważ mamy dane użytkownika z API");
-
-          // Sprawdzamy czy email jest zweryfikowany
-          if (!result.user.email_verified) {
-            navigate("/auth/verify-email");
-            return;
-          }
-
-          // Przekierowujemy do strony głównej mimo błędu odświeżania
-          navigate("/");
-          return;
-        }
-
-        // Dla pozostałych błędów kontynuujemy mimo błędu odświeżania sesji
+      // Sprawdzamy czy email jest zweryfikowany
+      if (result.user && !result.user.email_verified) {
+        navigate("/auth/verify-email");
+        return;
       }
+
+      // Przekierowujemy do strony głównej
+      navigate("/");
     } catch (error) {
       logger.error("Błąd podczas logowania", error);
 

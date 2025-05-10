@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { logger } from "@/lib/services/logger.service";
 import { createSupabaseBrowserClient } from "@/db/supabase.client";
 import type { ExtendedUser } from "@/types/auth.types";
+import type { UseFormReturn } from "react-hook-form";
 
 // Nie deklarujemy typów globalnych, używamy typu dla lokalnej zmiennej
 type WindowWithAstroLocals = Window & {
@@ -13,10 +14,46 @@ type WindowWithAstroLocals = Window & {
   };
 };
 
+// Definiujemy typy dla logowania
+interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+// Definiujemy typ dla formularza logowania
+interface LoginFormFields {
+  email: string;
+  password: string;
+  [key: string]: string | unknown;
+}
+
+interface SignInResult {
+  success: boolean;
+  message?: string;
+  user?: {
+    id: string;
+    email: string;
+    email_verified: boolean;
+    raw_user_meta_data?: Record<string, unknown>;
+  };
+  error?: {
+    code: string;
+    message: string;
+    details?: Record<string, unknown>;
+  };
+}
+
+// Definiujemy typ dla funkcji signIn
+type SignInFunction = (
+  credentials: LoginCredentials,
+  formInstance?: UseFormReturn<LoginFormFields>
+) => Promise<SignInResult>;
+
 interface UseAuthReturn {
   user: ExtendedUser | null;
   isLoading: boolean;
   error: Error | null;
+  signIn: SignInFunction;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<boolean>;
 }
@@ -255,6 +292,85 @@ export const useAuth = (): UseAuthReturn => {
     };
   }, [supabase]);
 
+  // Funkcja logowania - nie używamy useCallback, aby uniknąć problemów z typowaniem
+  const signIn: SignInFunction = async (credentials, formInstance) => {
+    if (!supabase) {
+      logger.error("Próba logowania bez zainicjalizowanego klienta Supabase");
+      throw new Error("Klient Supabase nie jest zainicjalizowany");
+    }
+
+    try {
+      setIsLoading(true);
+      logger.debug("Rozpoczęcie procesu logowania");
+
+      // Używamy API endpointu zamiast bezpośredniego wywołania supabase.auth
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(credentials),
+      });
+
+      const result = (await response.json()) as SignInResult;
+
+      if (!response.ok) {
+        // Obsługa błędów walidacji
+        if (
+          response.status === 400 &&
+          result.error?.code === "VALIDATION_ERROR" &&
+          result.error?.details &&
+          formInstance
+        ) {
+          Object.entries(result.error.details).forEach(([field, errors]) => {
+            try {
+              // Upewniamy się, że field jest traktowane jako string
+              const fieldName = field as string;
+              // Używamy string jako FieldPath dla bezpieczeństwa typów
+              formInstance.setError(fieldName, {
+                message: Array.isArray(errors) ? errors[0] : String(errors),
+              });
+            } catch (err) {
+              logger.error(`Nie można ustawić błędu dla pola ${field}`, err);
+            }
+          });
+          throw new Error("Popraw błędy w formularzu");
+        }
+
+        // Obsługa wygaśnięcia sesji
+        if (response.status === 401) {
+          if (result.error?.code === "INVALID_CREDENTIALS") {
+            throw new Error("Nieprawidłowy email lub hasło");
+          }
+          window.dispatchEvent(new Event("session-expired"));
+          throw new Error("Sesja wygasła. Zaloguj się ponownie.");
+        }
+
+        // Obsługa błędów autoryzacji
+        if (response.status === 403) {
+          if (result.error?.code === "EMAIL_NOT_VERIFIED") {
+            throw new Error("Email nie został zweryfikowany. Sprawdź swoją skrzynkę email.");
+          }
+          throw new Error("Brak dostępu. Sprawdź czy Twoje konto jest aktywne.");
+        }
+
+        throw new Error(result.error?.message || "Nieprawidłowy email lub hasło");
+      }
+
+      // Odświeżamy dane użytkownika po pomyślnym logowaniu
+      await refreshSession();
+
+      return result;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error("Błąd podczas logowania");
+      logger.error(`Błąd podczas logowania: ${error.message}`);
+      setError(error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const signOut = async () => {
     if (!supabase) {
       logger.error("Próba wylogowania bez zainicjalizowanego klienta Supabase");
@@ -287,6 +403,7 @@ export const useAuth = (): UseAuthReturn => {
     user,
     isLoading,
     error,
+    signIn,
     signOut,
     refreshSession,
   };
