@@ -176,9 +176,11 @@ export function DocumentDetailView({ documentId }: DocumentDetailViewProps) {
               if (response.status === 401) {
                 toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
                 navigate("/login");
+                reject(new Error("Sesja wygasła"));
                 return;
               }
-              throw new Error("Nie udało się usunąć fiszki");
+              reject(new Error("Nie udało się usunąć fiszki"));
+              return;
             }
 
             toast.success("Fiszka została usunięta");
