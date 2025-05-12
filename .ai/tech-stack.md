@@ -16,5 +16,16 @@ AI - Komunikacja z modelami przez usługę Openrouter.ai:
 - Pozwala na ustawianie limitów finansowych na klucze API
 
 CI/CD i Hosting:
-- Github Actions do tworzenia pipeline’ów CI/CD
+- Github Actions do tworzenia pipeline'ów CI/CD
 - DigitalOcean do hostowania aplikacji za pośrednictwem obrazu docker
+
+Testy:
+- Testy jednostkowe:
+  - Vitest (^3.1.1) jako framework testowy oparty na Vite
+  - @testing-library/react (^16.3.0) do testowania komponentów React
+  - @testing-library/dom do testowania komponentów Astro
+  - jsdom (^26.1.0) jako środowisko przeglądarki do uruchamiania testów
+  - Codecov do śledzenia pokrycia kodu testami
+
+- Testy end-to-end (E2E):
+  - Playwright do kompleksowych testów przeglądarkowych (wspiera silniki Chromium, Firefox, WebKit)
