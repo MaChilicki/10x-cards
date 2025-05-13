@@ -160,6 +160,24 @@ Unit test structure:
 - `tests/unit/` - unit tests for components and functions
 - `tests/utils/` - test utilities and helpers
 
+#### Covered Areas
+
+The project includes unit tests for the following areas:
+- **Services**:
+  - `openrouter.service.ts` - OpenRouter API integration tests
+  - `topics.service.ts` - Topic management functionality tests
+  - `logger.service.ts` - Logging service tests
+  - `ai-generate.service.ts` - AI generation service tests
+  - `documents.service.ts` - Document management service tests
+- **API Endpoints**:
+  - Document operations endpoints
+  - AI content generation endpoints
+  - Flashcard management endpoints
+- **Frontend Components**:
+  - Document management interface components
+  - Document views and editing interfaces
+  - Flashcard management user interface
+
 ### End-to-End Tests (Playwright)
 
 The project uses Playwright for E2E tests that verify application functionality in the browser.
