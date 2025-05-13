@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { DocumentDetailView } from "../document-detail-view";
 import { toast } from "sonner";
-import { logger } from "@/lib/services/logger.service";
 
 // Mocks
 vi.mock("sonner", () => ({
@@ -111,6 +110,10 @@ describe("handleAddFlashcard", () => {
     vi.restoreAllMocks();
     // Mock dla globalnego fetch
     global.fetch = vi.fn();
+    // Wyciszamy oczekiwane błędy w konsoli
+    vi.spyOn(console, "error").mockImplementation(() => {
+      /* noop */
+    });
   });
 
   it("powinien dodać fiszkę gdy odpowiedź API jest poprawna", async () => {
@@ -164,38 +167,27 @@ describe("handleAddFlashcard", () => {
     // Działanie: Renderujemy komponent
     render(<DocumentDetailView documentId="doc123" />);
 
-    // Otwieramy modal i wykonujemy submit
+    // Otwieramy modal
     const addButton = await screen.findByText("Dodaj fiszkę ręcznie");
     fireEvent.click(addButton);
 
-    // Przygotowujemy się na odrzucenie Promise w handleAddFlashcard
+    // Znajdź przycisk submit
     const submitButton = await screen.findByTestId("submit-button");
-    const clickPromise = Promise.resolve()
-      .then(() => {
-        fireEvent.click(submitButton);
-        return Promise.resolve(); // Daje czas na obsługę błędu
-      })
-      .catch(() => {
-        // Przechwytujemy potencjalny błąd, aby nie zatrzymał testu
-      });
 
-    // Czekamy na zakończenie asynchronicznych operacji
-    await clickPromise;
+    // Klikamy przycisk i oczekujemy, że wyświetli się komunikat o błędzie
+    fireEvent.click(submitButton);
 
     // Sprawdzenie: Weryfikujemy obsługę błędu
     await waitFor(() => {
-      // Oczekujemy wyjątku w kodzie, który powinien zostać złapany
+      // Sprawdzamy czy fetch został wywołany
       expect(global.fetch).toHaveBeenCalled();
-      // Sprawdzamy czy logger.error został wywołany
-      expect(logger.error).toHaveBeenCalledWith("Błąd podczas dodawania fiszki:", expect.any(Error));
-      // Modal nie powinien zostać zamknięty w przypadku błędu
-      expect(screen.getByTestId("mock-modal")).toBeInTheDocument();
+
+      // Sprawdzamy czy wyświetlono komunikat błędu
+      expect(toast.error).toHaveBeenCalledWith("Nie udało się dodać fiszki");
     });
 
-    // UWAGA: Ten test może powodować pojawienie się komunikatu o nieobsłużonym odrzuconym Promise:
-    // "Unhandled Rejection: Error: Nie udało się dodać fiszki"
-    // Jest to spodziewane zachowanie, ponieważ w komponencie, po próbie dodania fiszki i otrzymaniu
-    // błędu 500, rzucamy wyjątek, który nie jest w pełni obsługiwany w teście.
+    // Modal nie powinien zostać zamknięty w przypadku błędu
+    expect(screen.getByTestId("mock-modal")).toBeInTheDocument();
   });
 
   it("powinien przekierować na stronę logowania gdy sesja wygasła (status 401)", async () => {
@@ -208,17 +200,25 @@ describe("handleAddFlashcard", () => {
     // Działanie: Renderujemy komponent
     render(<DocumentDetailView documentId="doc123" />);
 
-    // Otwieramy modal i wykonujemy submit
+    // Otwieramy modal
     const addButton = await screen.findByText("Dodaj fiszkę ręcznie");
     fireEvent.click(addButton);
 
+    // Znajdź przycisk submit
     const submitButton = await screen.findByTestId("submit-button");
-    fireEvent.click(submitButton);
+
+    // Używamy act aby bezpiecznie obsłużyć asynchroniczne operacje i oczekiwane błędy
+    await act(async () => {
+      try {
+        // Klikamy przycisk i obsługujemy potencjalny błąd
+        fireEvent.click(submitButton);
+      } catch {
+        // Błąd jest oczekiwany, więc go ignorujemy
+      }
+    });
 
     // Sprawdzenie: Weryfikujemy przekierowanie do strony logowania
-    await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("Sesja wygasła"));
-      expect(navigateMock).toHaveBeenCalledWith("/login");
-    });
+    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("Sesja wygasła"));
+    expect(navigateMock).toHaveBeenCalledWith("/login");
   });
 });

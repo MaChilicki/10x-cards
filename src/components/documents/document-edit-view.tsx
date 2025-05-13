@@ -154,7 +154,8 @@ export function DocumentEditView({ documentId, topicId, topicTitle, referrer }: 
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
-      return Promise.reject(new Error("Formularz zawiera błędy"));
+      toast.error("Formularz zawiera błędy walidacji");
+      return Promise.resolve();
     }
 
     try {
@@ -175,7 +176,10 @@ export function DocumentEditView({ documentId, topicId, topicTitle, referrer }: 
             navigate("/login");
             return;
           }
-          throw new Error("Nie udało się zaktualizować dokumentu");
+          const errorMsg = "Nie udało się zaktualizować dokumentu";
+          toast.error(errorMsg);
+          setActionError(new Error(errorMsg));
+          return;
         }
 
         const updatedDocument = await response.json();
@@ -305,7 +309,10 @@ export function DocumentEditView({ documentId, topicId, topicTitle, referrer }: 
             navigate("/login");
             return;
           }
-          throw new Error("Nie udało się utworzyć dokumentu");
+          const errorMsg = "Nie udało się utworzyć dokumentu";
+          toast.error(errorMsg);
+          setActionError(new Error(errorMsg));
+          return;
         }
 
         const newDocument = await response.json();

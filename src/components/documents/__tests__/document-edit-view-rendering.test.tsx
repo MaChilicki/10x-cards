@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { DocumentEditView } from "../document-edit-view";
 
@@ -41,6 +41,11 @@ describe("DocumentEditView - renderowanie", () => {
   beforeEach(() => {
     vi.resetAllMocks();
 
+    // Wyciszamy oczekiwane błędy konsoli
+    vi.spyOn(console, "error").mockImplementation(() => {
+      /* noop */
+    });
+
     // Dla wszystkich testów ustawiamy domyślną implementację fetch, która zawiesza żądanie
     // Pozwala to uniknąć problemu nieskończonej rekurencji
     global.fetch = vi.fn().mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100)));
@@ -61,10 +66,6 @@ describe("DocumentEditView - renderowanie", () => {
 
   it("powinien obsłużyć błędy pobierania dokumentu", () => {
     // Przygotowanie: symulacja błędu w komponencie
-    vi.spyOn(console, "error").mockImplementation(() => {
-      /* pusta implementacja, wyciszamy błędy */
-    });
-
     render(<ErrorComponent />);
 
     // Sprawdzenie

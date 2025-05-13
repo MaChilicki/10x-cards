@@ -110,7 +110,8 @@ export function DocumentDetailView({ documentId }: DocumentDetailViewProps) {
           navigate("/login");
           return;
         }
-        throw new Error("Nie udało się dodać fiszki");
+        toast.error("Nie udało się dodać fiszki");
+        return;
       }
 
       toast.success("Fiszka została dodana");
@@ -118,7 +119,7 @@ export function DocumentDetailView({ documentId }: DocumentDetailViewProps) {
       await Promise.all([refetchFlashcards(), refetchDocument()]);
     } catch (error) {
       logger.error("Błąd podczas dodawania fiszki:", error);
-      throw error;
+      toast.error("Wystąpił błąd podczas dodawania fiszki");
     } finally {
       setIsAddingFlashcard(false);
     }
@@ -140,24 +141,26 @@ export function DocumentDetailView({ documentId }: DocumentDetailViewProps) {
           navigate("/login");
           return;
         }
-        throw new Error("Nie udało się zaktualizować fiszki");
+        toast.error("Nie udało się zaktualizować fiszki");
+        return;
       }
 
       toast.success("Fiszka została zaktualizowana");
       await Promise.all([refetchFlashcards(), refetchDocument()]);
     } catch (error) {
       logger.error("Błąd podczas edycji fiszki:", error);
-      throw error;
+      toast.error("Wystąpił błąd podczas aktualizacji fiszki");
     }
   };
 
   const handleDeleteFlashcard = async (flashcardId: string) => {
     const flashcard = flashcards.find((f) => f.id === flashcardId);
     if (!flashcard) {
-      throw new Error(`Nie znaleziono fiszki o ID: ${flashcardId}`);
+      toast.error(`Nie znaleziono fiszki o ID: ${flashcardId}`);
+      return Promise.reject();
     }
 
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>((resolve) => {
       dialogActions.openDialog({
         title: "Usuń fiszkę",
         description: "Czy na pewno chcesz usunąć tę fiszkę? Tej operacji nie można cofnąć.",
@@ -176,18 +179,19 @@ export function DocumentDetailView({ documentId }: DocumentDetailViewProps) {
               if (response.status === 401) {
                 toast.error("Sesja wygasła. Zostaniesz przekierowany do strony logowania.");
                 navigate("/login");
-                reject(new Error("Sesja wygasła"));
-                return;
+                return resolve();
               }
-              reject(new Error("Nie udało się usunąć fiszki"));
-              return;
+              toast.error("Nie udało się usunąć fiszki");
+              return resolve();
             }
 
             toast.success("Fiszka została usunięta");
             await Promise.all([refetchFlashcards(), refetchDocument()]);
             resolve();
           } catch (error) {
-            reject(error);
+            logger.error("Błąd podczas usuwania fiszki:", error);
+            toast.error("Wystąpił błąd podczas usuwania fiszki");
+            resolve();
           }
         },
       });

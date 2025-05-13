@@ -125,8 +125,8 @@ describe("DocumentEditView - anulowanie", () => {
     });
 
     // Zmień tytuł dokumentu
-    await userEvent.clear(screen.getByLabelText("Tytuł"));
-    await userEvent.type(screen.getByLabelText("Tytuł"), "Zmieniony tytuł");
+    await userEvent.clear(screen.getByLabelText("Tytuł dokumentu"));
+    await userEvent.type(screen.getByLabelText("Tytuł dokumentu"), "Zmieniony tytuł");
 
     // Kliknij anuluj po wprowadzeniu zmian
     fireEvent.click(screen.getByText("Anuluj"));
