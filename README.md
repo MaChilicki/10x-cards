@@ -184,6 +184,7 @@ The project uses Playwright for E2E tests that verify application functionality 
 
 ```bash
 # Run all E2E tests
+# This command includes tests from the tests/e2e/scenarios/ directory.
 npm run test:e2e
 
 # Run E2E tests in UI mode
@@ -200,6 +201,7 @@ E2E test structure:
 - `tests/e2e/` - end-to-end tests
 - `tests/e2e/pages/` - page objects (Page Object Model)
 - `tests/e2e/fixtures/` - test data
+- `tests/e2e/scenarios/` - example E2E test scenarios
 
 ### Testing Best Practices
 

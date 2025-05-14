@@ -6,11 +6,12 @@ interface AuthCardProps {
   description: React.ReactNode;
   children: React.ReactElement;
   footer?: React.ReactElement;
+  "data-testid"?: string;
 }
 
-export function AuthCard({ title, description, children, footer }: AuthCardProps) {
+export function AuthCard({ title, description, children, footer, "data-testid": dataTestId }: AuthCardProps) {
   return (
-    <Card className="cursor-default">
+    <Card className="cursor-default" data-testid={dataTestId}>
       <CardHeader className="flex flex-col items-center">
         <img src="/logo.svg" alt={`${APP_CONSTANTS.name} Logo`} className="w-24 h-24 mb-4" />
         <CardTitle>{title}</CardTitle>

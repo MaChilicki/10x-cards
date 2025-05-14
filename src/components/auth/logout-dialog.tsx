@@ -67,7 +67,7 @@ export function LogoutDialog({ isOpen, onClose, onConfirm, hasUnsavedChanges = f
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px]" data-testid="logout-dialog">
         <DialogHeader>
           <DialogTitle>Wylogowanie</DialogTitle>
           <DialogDescription>
@@ -77,10 +77,22 @@ export function LogoutDialog({ isOpen, onClose, onConfirm, hasUnsavedChanges = f
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isLoading} aria-busy={isLoading}>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={isLoading}
+            aria-busy={isLoading}
+            data-testid="logout-cancel-button"
+          >
             Anuluj
           </Button>
-          <Button variant="destructive" onClick={handleLogout} disabled={isLoading} aria-busy={isLoading}>
+          <Button
+            variant="destructive"
+            onClick={handleLogout}
+            disabled={isLoading}
+            aria-busy={isLoading}
+            data-testid="logout-confirm-button"
+          >
             {isLoading ? "Wylogowywanie..." : "Wyloguj"}
           </Button>
         </DialogFooter>

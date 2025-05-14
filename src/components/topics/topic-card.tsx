@@ -15,15 +15,16 @@ interface TopicCardProps {
 
 export function TopicCard({ topic, onTopicClick, onEditClick, onDeleteClick }: TopicCardProps) {
   return (
-    <Card className="hover:bg-accent/5">
+    <Card className="hover:bg-accent/5" data-testid="topic-item" data-topicid={topic.id}>
       <CardHeader className="relative">
-        <div className="absolute right-6 top-6 flex gap-2">
+        <div className="absolute right-6 top-6 flex gap-2" data-testid="topic-actions">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
+                  data-testid="edit-topic-button"
                   onClick={(e) => {
                     e.stopPropagation();
                     onEditClick(topic);
@@ -44,6 +45,7 @@ export function TopicCard({ topic, onTopicClick, onEditClick, onDeleteClick }: T
                 <Button
                   variant="ghost"
                   size="icon"
+                  data-testid="delete-topic-button"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDeleteClick(topic);
@@ -58,7 +60,11 @@ export function TopicCard({ topic, onTopicClick, onEditClick, onDeleteClick }: T
             </Tooltip>
           </TooltipProvider>
         </div>
-        <CardTitle className="cursor-pointer hover:underline" onClick={() => onTopicClick(topic)}>
+        <CardTitle
+          className="cursor-pointer hover:underline"
+          onClick={() => onTopicClick(topic)}
+          data-testid="topic-title"
+        >
           <div className="flex items-center gap-2">
             <FolderClosed className="h-4 w-4 text-muted-foreground" />
             {topic.name}

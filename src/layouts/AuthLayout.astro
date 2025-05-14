@@ -33,10 +33,10 @@ const astroLocals = {
     </script>
   </head>
   <body>
-    <div class="flex flex-col h-screen">
+    <div class="flex flex-col h-screen" data-testid="auth-layout">
       <main class="flex-1">
         <div class="container mx-auto px-4">
-          <div class="mx-auto max-w-[400px]">
+          <div class="mx-auto max-w-[400px]" data-testid="auth-container">
             <slot />
           </div>
         </div>

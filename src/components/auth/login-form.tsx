@@ -75,7 +75,7 @@ export function LoginForm() {
   };
 
   return (
-    <AuthLayout>
+    <AuthLayout data-testid="auth-layout">
       <AuthCard
         title="Logowanie"
         description="Zaloguj się do swojego konta"
@@ -87,6 +87,7 @@ export function LoginForm() {
             </a>
           </div>
         }
+        data-testid="login-card"
       >
         <AuthForm<typeof loginSchema>
           schema={loginSchema}
@@ -99,6 +100,7 @@ export function LoginForm() {
               Nie pamiętasz hasła?
             </a>
           }
+          data-testid="login-form"
         >
           {(form) => (
             <>
@@ -110,6 +112,7 @@ export function LoginForm() {
                   aria-label="Email"
                   aria-required="true"
                   aria-invalid={!!form.formState.errors.email}
+                  data-testid="login-email-input"
                   {...form.register("email")}
                 />
                 {form.formState.errors.email && (
@@ -125,6 +128,7 @@ export function LoginForm() {
                   aria-label="Hasło"
                   aria-required="true"
                   aria-invalid={!!form.formState.errors.password}
+                  data-testid="login-password-input"
                   {...form.register("password")}
                 />
                 {form.formState.errors.password && (

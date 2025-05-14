@@ -8,6 +8,7 @@ export interface LoadingSpinnerProps extends React.ComponentPropsWithoutRef<"div
   variant?: "default" | "primary";
   withCard?: boolean;
   message?: string;
+  "data-testid"?: string;
 }
 
 const sizeClasses = {
@@ -27,20 +28,34 @@ export function LoadingSpinner({
   variant = "default",
   withCard = false,
   message = "Ładowanie...",
+  "data-testid": dataTestId = "loading-spinner",
   ...props
 }: LoadingSpinnerProps) {
   const spinner = (
-    <div role="status" className={cn("flex flex-col items-center gap-2", "animate-pulse", className)} {...props}>
+    <div
+      role="status"
+      className={cn("flex flex-col items-center gap-2", "animate-pulse", className)}
+      data-testid={dataTestId}
+      {...props}
+    >
       <div className="relative">
         <div className={cn("absolute inset-0 rounded-full", "bg-current opacity-20", "animate-ping")} />
         <Loader2 className={cn("animate-spin", sizeClasses[size], variantClasses[variant], "relative")} />
       </div>
-      {message && <div className="text-sm text-muted-foreground">{message}</div>}
+      {message && (
+        <div className="text-sm text-muted-foreground" data-testid={`${dataTestId}-message`}>
+          {message}
+        </div>
+      )}
       <span className="sr-only">{message}</span>
     </div>
   );
 
   if (!withCard) return spinner;
 
-  return <Card className="p-4">{spinner}</Card>;
+  return (
+    <Card className="p-4" data-testid={`${dataTestId}-card`}>
+      {spinner}
+    </Card>
+  );
 }

@@ -56,8 +56,8 @@ export function TopicFormModal({ isOpen, isEditMode, initialData, onClose, onSub
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent>
-        <form onSubmit={handleFormSubmit}>
+      <DialogContent data-testid="topic-form-modal">
+        <form onSubmit={handleFormSubmit} data-testid="topic-form">
           <DialogHeader>
             <DialogTitle>{isEditMode ? "Edytuj temat" : "Nowy temat"}</DialogTitle>
             <DialogDescription>
@@ -76,8 +76,13 @@ export function TopicFormModal({ isOpen, isEditMode, initialData, onClose, onSub
                 aria-label="Nazwa tematu"
                 aria-required="true"
                 aria-invalid={!!errors.name}
+                data-testid="topic-name-input"
               />
-              {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+              {errors.name && (
+                <p className="text-sm text-destructive" data-testid="topic-name-error">
+                  {errors.name}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -89,18 +94,33 @@ export function TopicFormModal({ isOpen, isEditMode, initialData, onClose, onSub
                 disabled={submitting}
                 aria-label="Opis tematu"
                 aria-invalid={!!errors.description}
+                data-testid="topic-description-input"
               />
-              {errors.description && <p className="text-sm text-destructive">{errors.description}</p>}
+              {errors.description && (
+                <p className="text-sm text-destructive" data-testid="topic-description-error">
+                  {errors.description}
+                </p>
+              )}
             </div>
           </div>
 
-          {errors.general && <p className="text-sm text-destructive mb-4">{errors.general}</p>}
+          {errors.general && (
+            <p className="text-sm text-destructive mb-4" data-testid="topic-form-error">
+              {errors.general}
+            </p>
+          )}
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={submitting}
+              data-testid="topic-cancel-button"
+            >
               Anuluj
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting} data-testid="topic-submit-button">
               {submitting ? "Zapisywanie..." : isEditMode ? "Zapisz zmiany" : "Utwórz temat"}
             </Button>
           </DialogFooter>

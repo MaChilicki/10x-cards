@@ -45,21 +45,24 @@ export function MainNav() {
   };
 
   return (
-    <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header
+      className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+      data-testid="main-navigation"
+    >
       <div className="container mx-auto px-4">
         <div className="flex h-14 items-center justify-between">
           <div className="flex items-center gap-6">
-            <a className="flex items-center space-x-2" href="/">
+            <a className="flex items-center space-x-2" href="/" data-testid="app-logo">
               <img src="/logo.svg" alt={`${APP_CONSTANTS.name} Logo`} className="h-9 w-9" />
               <span className="font-bold">{APP_CONSTANTS.name}</span>
             </a>
             <NavigationMenu>
-              <NavigationMenuList>
+              <NavigationMenuList data-testid="navigation-menu">
                 <NavigationMenuItem>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <NavigationMenuLink href="/" className={navigationMenuTriggerStyle()}>
+                        <NavigationMenuLink href="/" className={navigationMenuTriggerStyle()} data-testid="nav-home">
                           Strona główna
                         </NavigationMenuLink>
                       </TooltipTrigger>
@@ -73,7 +76,11 @@ export function MainNav() {
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <NavigationMenuLink href="/topics" className={navigationMenuTriggerStyle()}>
+                        <NavigationMenuLink
+                          href="/topics"
+                          className={navigationMenuTriggerStyle()}
+                          data-testid="nav-topics"
+                        >
                           Fiszki
                         </NavigationMenuLink>
                       </TooltipTrigger>
@@ -87,7 +94,11 @@ export function MainNav() {
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <NavigationMenuLink href="/sessions" className={navigationMenuTriggerStyle()}>
+                        <NavigationMenuLink
+                          href="/sessions"
+                          className={navigationMenuTriggerStyle()}
+                          data-testid="nav-sessions"
+                        >
                           Sesje nauki
                         </NavigationMenuLink>
                       </TooltipTrigger>
@@ -101,7 +112,11 @@ export function MainNav() {
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <NavigationMenuLink href="/statistics" className={navigationMenuTriggerStyle()}>
+                        <NavigationMenuLink
+                          href="/statistics"
+                          className={navigationMenuTriggerStyle()}
+                          data-testid="nav-statistics"
+                        >
                           Statystyki
                         </NavigationMenuLink>
                       </TooltipTrigger>
@@ -116,26 +131,32 @@ export function MainNav() {
           </div>
           <div className="flex items-center gap-4">
             {isLoading ? (
-              <div className="text-sm text-muted-foreground">Ładowanie...</div>
+              <div className="text-sm text-muted-foreground" data-testid="auth-loading">
+                Ładowanie...
+              </div>
             ) : user ? (
               <>
                 <DropdownMenu>
-                  <DropdownMenuTrigger className="outline-none">
+                  <DropdownMenuTrigger className="outline-none" data-testid="user-menu-trigger">
                     <UserAvatar showName={true} className="cursor-pointer hover:opacity-80 transition-opacity" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuItem asChild>
-                      <a href="/profile" className="cursor-pointer">
+                      <a href="/profile" className="cursor-pointer" data-testid="nav-profile">
                         Profil
                       </a>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <a href="/change-password" className="cursor-pointer">
+                      <a href="/change-password" className="cursor-pointer" data-testid="nav-change-password">
                         Zmień hasło
                       </a>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setIsLogoutDialogOpen(true)} className="cursor-pointer">
+                    <DropdownMenuItem
+                      onClick={() => setIsLogoutDialogOpen(true)}
+                      className="cursor-pointer"
+                      data-testid="nav-logout"
+                    >
                       Wyloguj
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -147,7 +168,7 @@ export function MainNav() {
                 />
               </>
             ) : (
-              <a href="/login" className="text-sm font-medium hover:underline">
+              <a href="/login" className="text-sm font-medium hover:underline" data-testid="nav-login">
                 Zaloguj się
               </a>
             )}

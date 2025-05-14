@@ -142,7 +142,7 @@ export function TopicsListView() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8" data-testid="topics-loading-view">
         <div className="flex flex-col items-center justify-center min-h-[400px]">
           <LoadingSpinner size="lg" withCard message="Ładowanie tematów..." />
         </div>
@@ -155,9 +155,11 @@ export function TopicsListView() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8" data-testid="topics-list-view">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold">Tematy</h1>
+        <h1 className="text-2xl font-bold" data-testid="topics-heading">
+          Tematy
+        </h1>
       </div>
 
       <div className="flex justify-between items-center mb-6">
@@ -167,7 +169,9 @@ export function TopicsListView() {
           itemsPerPage={itemsPerPage}
           onItemsPerPageChange={handleItemsPerPageChange}
         />
-        <Button onClick={handleOpenAddModal}>Dodaj temat</Button>
+        <Button onClick={handleOpenAddModal} data-testid="add-topic-button">
+          Dodaj temat
+        </Button>
       </div>
 
       <TopicsList
@@ -178,7 +182,7 @@ export function TopicsListView() {
       />
 
       {totalPages > 1 && (
-        <div className="mt-6">
+        <div className="mt-6" data-testid="topics-pagination">
           <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </div>
       )}

@@ -25,7 +25,7 @@ export function DeleteTopicDialog({ isOpen, topic, deleting, error, onClose, onC
 
   const hasContent = topic.documents_count > 0 || topic.flashcards_count > 0;
   const contentWarning = hasContent && (
-    <Alert variant="destructive" className="mt-4">
+    <Alert variant="destructive" className="mt-4" data-testid="delete-topic-content-warning">
       <AlertCircle className="h-4 w-4" />
       <AlertDescription>
         {`Nie można usunąć tematu, który zawiera ${topic.documents_count} ${
@@ -50,7 +50,7 @@ export function DeleteTopicDialog({ isOpen, topic, deleting, error, onClose, onC
   );
 
   const errorAlert = error && (
-    <Alert variant="destructive" className="mt-4">
+    <Alert variant="destructive" className="mt-4" data-testid="delete-topic-error">
       <AlertCircle className="h-4 w-4" />
       <AlertDescription>{error.message || "Wystąpił błąd podczas usuwania tematu"}</AlertDescription>
     </Alert>
@@ -58,7 +58,7 @@ export function DeleteTopicDialog({ isOpen, topic, deleting, error, onClose, onC
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
+      <DialogContent data-testid="delete-topic-dialog">
         <DialogHeader>
           <div className="flex items-center space-x-2">
             <AlertCircle className="h-5 w-5 text-destructive" />
@@ -73,10 +73,22 @@ export function DeleteTopicDialog({ isOpen, topic, deleting, error, onClose, onC
         {errorAlert}
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose} disabled={deleting}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={deleting}
+            data-testid="delete-topic-cancel-button"
+          >
             Anuluj
           </Button>
-          <Button type="button" variant="destructive" onClick={onConfirm} disabled={deleting || hasContent}>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={onConfirm}
+            disabled={deleting || hasContent}
+            data-testid="delete-topic-confirm-button"
+          >
             {deleting ? "Usuwanie..." : "Usuń temat"}
           </Button>
         </DialogFooter>

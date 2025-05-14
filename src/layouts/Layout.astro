@@ -58,9 +58,9 @@ const astroLocals = {
     </script>
   </head>
   <body>
-    <div class="flex flex-col min-h-screen">
+    <div class="flex flex-col min-h-screen" data-testid="main-layout">
       <MainNav client:only="react" />
-      <main class="flex-1">
+      <main class="flex-1" data-testid="main-content">
         <slot />
       </main>
       <Footer />

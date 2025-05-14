@@ -19,6 +19,7 @@ interface AuthFormProps<T extends z.ZodType> {
   warnOnUnsavedChanges?: boolean;
   onFormReady?: (form: UseFormReturn<z.infer<T>>) => void;
   refreshSessionAfterSubmit?: boolean;
+  "data-testid"?: string;
 }
 
 export function AuthForm<T extends z.ZodType>({
@@ -31,6 +32,7 @@ export function AuthForm<T extends z.ZodType>({
   warnOnUnsavedChanges = true,
   onFormReady,
   refreshSessionAfterSubmit = true,
+  "data-testid": dataTestId,
 }: AuthFormProps<T>) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
@@ -100,16 +102,16 @@ export function AuthForm<T extends z.ZodType>({
   };
 
   return (
-    <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-4">
+    <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-4" data-testid={dataTestId}>
       {generalError && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" data-testid="auth-form-error">
           <AlertDescription>{generalError}</AlertDescription>
         </Alert>
       )}
 
       {children(form)}
 
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
+      <Button type="submit" className="w-full" disabled={isSubmitting} data-testid="auth-submit-button">
         {isSubmitting ? (
           <>
             <LoadingSpinner className="mr-2 h-4 w-4" />
