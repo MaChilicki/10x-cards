@@ -18,5 +18,5 @@ runs:
         cache-dependency-path: ${{ inputs.cache-dependency-path || '' }}
 
     - name: Instalacja zależności
-      run: npm ci
+      run: npm install --no-fund --no-audit
       shell: bash 

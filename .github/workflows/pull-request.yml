@@ -33,7 +33,7 @@ jobs:
           npm list --depth=0
 
       - name: Instalacja zależności
-        run: npm ci
+        run: npm install --no-fund --no-audit
 
       - name: Uruchomienie lintera
         run: npm run lint
@@ -47,7 +47,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: ./.github/actions/setup-node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Instalacja zależności
+        run: npm install --no-fund --no-audit
 
       - name: Uruchomienie testów jednostkowych z coverage
         run: npm run test:coverage
@@ -69,7 +75,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: ./.github/actions/setup-node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Instalacja zależności
+        run: npm install --no-fund --no-audit
 
       - name: Instalacja przeglądarek Playwright
         run: npx playwright install chromium
