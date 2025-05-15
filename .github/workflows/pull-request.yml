@@ -13,8 +13,27 @@ jobs:
       - name: Checkout kodu
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: ./.github/actions/setup-node
+      # Tymczasowo używamy bezpośrednio setup-node zamiast akcji kompozytowej
+      - name: Konfiguracja Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      # Debugowanie środowiska
+      - name: Debug info
+        run: |
+          echo "Node version:"
+          node -v
+          echo "NPM version:"
+          npm -v
+          echo "Zawartość .nvmrc:"
+          cat .nvmrc
+          echo "Lista zainstalowanych pakietów:"
+          npm list --depth=0
+
+      - name: Instalacja zależności
+        run: npm ci
 
       - name: Uruchomienie lintera
         run: npm run lint
