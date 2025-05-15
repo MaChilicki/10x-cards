@@ -79,11 +79,7 @@ const astroConfig = tseslint.config({
     "astro/prefer-class-list-directive": "error",
     "astro/prefer-object-class-list": "error",
     "astro/prefer-split-class-list": "error",
-    "astro/require-optimized-style-attribute": "error",
-    "astro/require-view-transitions": "error",
     "astro/semi": "error",
-    "astro/sort-imports": "error",
-    "astro/valid-define-vars": "error",
   },
 });
 

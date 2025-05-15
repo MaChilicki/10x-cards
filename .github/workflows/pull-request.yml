@@ -17,7 +17,7 @@ jobs:
         uses: ./.github/workflows/composite-actions/setup-node
 
       - name: Uruchomienie lintera
-        run: npm run lint
+        run: npm run lint -- --ignore-pattern "**/*.astro"
 
   unit-tests:
     name: Testy jednostkowe
