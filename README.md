@@ -1,4 +1,4 @@
-# 10xCards
+# 10xCards App
 
 ## Project Description
 10xCards is a cutting-edge card management application designed to simplify the creation, management, and sharing of digital cards. Built with modern technologies, the project aims to deliver a fast, scalable, and user-friendly experience suitable for both personal and professional use.
